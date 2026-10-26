@@ -1,12 +1,5 @@
-# Build files
 .gradle/
 build/
-out/
-
-# IDE
+run/
 .idea/
 *.iml
-
-# OS
-.DS_Store
-Thumbs.db

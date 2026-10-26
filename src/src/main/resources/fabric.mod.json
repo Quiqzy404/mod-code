@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "id": "modcode",
+  "version": "${version}",
+  "name": "Mod Code",
+  "description": "Loads a restricted JSON action script from the configured GitHub repository at game startup.",
+  "authors": ["Quiqzy404"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.quiqzy.modcode.ModCodeClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
