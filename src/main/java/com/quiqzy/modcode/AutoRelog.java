@@ -2,12 +2,11 @@
 package com.quiqzy.modcode;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.client.gui.screens.multiplayer.ConnectScreen;
-import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
-import net.minecraft.client.multiplayer.ServerAddress;
-import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.client.gui.screen.TitleScreen;
+import net.minecraft.client.gui.screen.multiplayer.ConnectScreen;
+import net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen;
+import net.minecraft.client.network.ServerAddress;
+import net.minecraft.client.network.ServerInfo;
 
 public class AutoRelog {
 
@@ -26,7 +25,7 @@ public class AutoRelog {
 
     public static void register() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client.player == null || client.level == null) {
+            if (client.player == null || client.world == null) {
                 return;
             }
 
@@ -52,7 +51,7 @@ public class AutoRelog {
             }
 
             // Aktuellen Server sichern.
-            ServerData server = client.getCurrentServer();
+            ServerInfo server = client.getCurrentServerEntry();
 
             if (server == null) {
                 return;
@@ -63,10 +62,10 @@ public class AutoRelog {
             armed = false;
 
             // Verbindung zum gleichen Server erneut starten.
-            ConnectScreen.startConnecting(
-                    new JoinMultiplayerScreen(new TitleScreen()),
+            ConnectScreen.connect(
+                    new MultiplayerScreen(new TitleScreen()),
                     client,
-                    ServerAddress.parseString(server.ip),
+                    ServerAddress.parse(server.address),
                     server,
                     false,
                     null

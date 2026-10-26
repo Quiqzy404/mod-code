@@ -138,6 +138,20 @@ public final class ModCodeClient implements ClientModInitializer {
                     continue;
                 }
                 try {
+                    Method register = loaded.getMethod("register");
+                    if (Modifier.isStatic(register.getModifiers()) && register.getParameterCount() == 0) {
+                        register.invoke(null);
+                        LOGGER.info("Registered downloaded class {}", name);
+                        continue;
+                    }
+                    LOGGER.warn("{}.register() must be public static and have no parameters.", name);
+                } catch (NoSuchMethodException ignored) {
+                    // Classes without register() can use the simpler run() entrypoint below.
+                } catch (ReflectiveOperationException exception) {
+                    LOGGER.error("Could not register downloaded class {}", name, exception);
+                    continue;
+                }
+                try {
                     Method run = loaded.getMethod("run");
                     if (!Modifier.isStatic(run.getModifiers()) || run.getParameterCount() != 0) {
                         LOGGER.warn("{}.run() must be public static and have no parameters.", name);

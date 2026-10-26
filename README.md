@@ -16,7 +16,7 @@ public final class MyFeature {
 }
 ```
 
-You can also add a class implementing Fabric's `ClientModInitializer`; the loader calls `onInitializeClient()` for it. Commit and push your Java changes. GitHub Actions compiles all Java files except the loader itself and publishes their `.class` files in `runtime-classes/`. The installed mod downloads the updated classes and runs them without replacing its JAR. Classes with no `run()` method are still loaded for use as helpers by another downloaded class.
+You can also use a public static no-argument `register()` method to set up Fabric event listeners, or implement Fabric's `ClientModInitializer` and use `onInitializeClient()`. Commit and push your Java changes. GitHub Actions compiles all Java files except the loader itself and publishes their `.class` files in `runtime-classes/`. The installed mod downloads the updated classes and runs them without replacing its JAR. Classes with no entrypoint method are still loaded for use as helpers by another downloaded class.
 
 This live loader is for Java code. Other files such as textures, sounds, mixin configs, or Fabric metadata are not automatically activated by downloading them; they need their own resource loader or a new mod JAR. Downloaded Java code runs with the same permissions as Minecraft, so only use code you trust. The repository must stay public so the game can fetch files without credentials.
 
