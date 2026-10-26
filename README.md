@@ -1,22 +1,17 @@
-# Mod Code (Fabric 1.21.11)
+# Mod Code — Fabric 1.21.11
 
-A small client-side Fabric mod for Minecraft 1.21.11. At startup it downloads `modcode.script.json` from this repository's `main` branch and interprets only the allowlisted `log` and `chat` actions. It does not execute Java, JavaScript, shell commands, or downloaded classes.
+A normal client-side Fabric mod project for Minecraft 1.21.11. Java source files in `src/main/java` are compiled into the mod JAR.
 
-## Build
+## Automatic builds
 
-Requires JDK 21. Run `./gradlew build` (Windows: `gradlew.bat build`). The jar is written to `build/libs/modcode-1.0.0.jar`. Install it together with Fabric API in the `mods` folder for Minecraft 1.21.11.
+GitHub Actions builds the project on every push and pull request. To download the latest build, open the repository's **Actions** tab, select the newest successful **Build Fabric mod** run, and download the `modcode-fabric-1.21.11` artifact. Extract the ZIP and put `modcode-1.0.0.jar` in the `mods` folder for your Fabric 1.21.11 profile. Fabric API is required.
 
-## Change what the mod does
+A changed or added Java class is included when GitHub builds the next JAR. Minecraft cannot load newly compiled mod classes from the repository into an already-running game: install the new JAR and restart Minecraft to use Java-code changes.
 
-Edit `modcode.script.json` on GitHub. Supported format:
+## Build locally
 
-```json
-{
-  "actions": [
-    { "type": "log", "message": "Printed in the game log" },
-    { "type": "chat", "message": "Shown in your client chat" }
-  ]
-}
-```
+Requires JDK 21. Run `./gradlew build` (Windows: `gradlew.bat build`). The JAR is created at `build/libs/modcode-1.0.0.jar`.
 
-The mod reads this file once each time Minecraft starts. Restart Minecraft to load changes. Maximum file size is 32 KiB, maximum 32 actions, and messages are limited to 240 characters. Unsupported action types are ignored.
+## Add mod code
+
+Put Java code under `src/main/java/com/quiqzy/modcode/`. To make another class run, call it from `ModCodeClient` or register it as a Fabric entrypoint in `src/main/resources/fabric.mod.json`. Commit and push your changes; the workflow will build a new downloadable JAR automatically.

@@ -1,6 +1,0 @@
-{
-  "actions": [
-    { "type": "log", "message": "Hello from your GitHub script!" },
-    { "type": "chat", "message": "Mod Code loaded the script from GitHub." }
-  ]
-}
