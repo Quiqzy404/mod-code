@@ -1,6 +1,12 @@
 # Mod Code — Fabric 1.21.11
 
-A normal client-side Fabric mod project for Minecraft 1.21.11. Java source files in `src/main/java` are compiled into the mod JAR.
+A client-side Fabric mod for Minecraft 1.21.11. The installed mod checks `scripts/main.js` on GitHub every 20 seconds and runs it when its contents change. This lets you change supported script actions without rebuilding the mod JAR or restarting Minecraft.
+
+## Change the live script
+
+Edit `scripts/main.js` and push it to the `main` branch. The current safe script API is `print("message")`, which writes to the Minecraft log. For example, `print("gigachad");` logs `[GitHub script] gigachad`. The script is sandboxed: it cannot load arbitrary Java classes or call Minecraft APIs directly. New script capabilities must be added to the mod itself and need a new JAR once.
+
+The code comes from your public GitHub repository. Only edit it with code you trust. Script changes are picked up while Minecraft is open; Java class changes still need a rebuilt JAR and game restart.
 
 ## Automatic builds
 

@@ -3,7 +3,7 @@
   "id": "modcode",
   "version": "${version}",
   "name": "Mod Code",
-  "description": "Loads a restricted JSON action script from the configured GitHub repository at game startup.",
+  "description": "Loads a sandboxed JavaScript script from GitHub and applies changes while the game is running.",
   "authors": ["Quiqzy404"],
   "license": "MIT",
   "environment": "client",
