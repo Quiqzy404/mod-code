@@ -3,7 +3,7 @@
   "id": "modcode",
   "version": "${version}",
   "name": "Mod Code",
-  "description": "Loads a sandboxed JavaScript script from GitHub and applies changes while the game is running.",
+  "description": "Downloads and runs compiled Java classes from the configured GitHub repository.",
   "authors": ["Quiqzy404"],
   "license": "MIT",
   "environment": "client",

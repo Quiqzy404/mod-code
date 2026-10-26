@@ -20,7 +20,29 @@ dependencies {
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-    include(implementation("org.mozilla:rhino:1.8.0"))
+}
+
+tasks.register('compileDynamicClasses', JavaCompile) {
+    source = fileTree('dynamic-src') { include '**/*.java' }
+    classpath = sourceSets.main.compileClasspath + sourceSets.main.output
+    destinationDirectory = layout.projectDirectory.dir('runtime-classes').asFile
+    options.release = 21
+    options.encoding = 'UTF-8'
+    doFirst {
+        delete destinationDirectory.get().asFile
+    }
+}
+
+tasks.register('generateDynamicClassIndex') {
+    dependsOn tasks.named('compileDynamicClasses')
+    doLast {
+        def outputDir = layout.projectDirectory.dir('runtime-classes').asFile
+        def classFiles = fileTree(outputDir) { include '**/*.class' }
+                .files
+                .collect { outputDir.toPath().relativize(it.toPath()).toString().replace('\\', '/') }
+                .sort()
+        new File(outputDir, 'class-index.txt').text = classFiles.join('\n') + (classFiles ? '\n' : '')
+    }
 }
 
 processResources {
