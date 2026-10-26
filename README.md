@@ -1,81 +1,22 @@
-# modcode
+# Mod Code (Fabric 1.21.11)
 
-A small Fabric mod for Minecraft 1.21.11 that downloads a safe script from GitHub on startup and executes a tiny, controlled action set.
+A small client-side Fabric mod for Minecraft 1.21.11. At startup it downloads `modcode.script.json` from this repository's `main` branch and interprets only the allowlisted `log` and `chat` actions. It does not execute Java, JavaScript, shell commands, or downloaded classes.
 
-## Features
-- Fabric project for Minecraft 1.21.11
-- Loads `modcode.script.json` from the `main` branch of this repository
-- Executes only trusted, allowlisted actions: `log` and `chat`
-- Logs a clear warning instead of crashing if the remote script cannot be loaded
-- No repeated background execution; the script is fetched once at startup
+## Build
 
-## Quick build
+Requires JDK 21. Run `./gradlew build` (Windows: `gradlew.bat build`). The jar is written to `build/libs/modcode-1.0.0.jar`. Install it together with Fabric API in the `mods` folder for Minecraft 1.21.11.
 
-From the repository root:
+## Change what the mod does
 
-```bash
-./gradlew build
-```
-
-The finished mod JAR is created in:
-
-```text
-build/libs/
-```
-
-On a normal build, the file will look like:
-
-```text
-build/libs/modcode-1.0.0.jar
-```
-
-## How the mod loads the script
-
-At startup, the mod fetches:
-
-```text
-https://raw.githubusercontent.com/Quiqzy404/mod-code/main/modcode.script.json
-```
-
-This file lives in the repository root and can be edited in GitHub without rebuilding the mod. After changing the JSON and restarting Minecraft, the new script will be loaded on the next launch.
-
-## Allowed script actions
-
-The script format is intentionally limited to harmless actions only:
+Edit `modcode.script.json` on GitHub. Supported format:
 
 ```json
 {
-  "version": 1,
   "actions": [
-    { "type": "log", "message": "modcode script loaded successfully" },
-    { "type": "chat", "message": "Hello from modcode!" }
+    { "type": "log", "message": "Printed in the game log" },
+    { "type": "chat", "message": "Shown in your client chat" }
   ]
 }
 ```
 
-Allowed actions:
-- `log`: writes to the Minecraft log
-- `chat`: sends a message to the in-game chat
-
-Not allowed:
-- running Java code
-- running JavaScript
-- shell commands
-- arbitrary file execution
-- network requests to random endpoints besides the GitHub script URL
-
-## Script update workflow
-
-1. Open the file `modcode.script.json` in the GitHub repository.
-2. Edit the JSON on the `main` branch.
-3. Save the file.
-4. Restart Minecraft.
-5. The mod fetches the updated script on the next startup.
-
-## Failure behavior
-
-If the remote script cannot be downloaded, the mod does not crash Minecraft. It logs a warning and continues startup normally.
-
-## Repository notes
-
-This repository contains the Fabric mod project in the root folder and no longer includes stale Forge files.
+The mod reads this file once each time Minecraft starts. Restart Minecraft to load changes. Maximum file size is 32 KiB, maximum 32 actions, and messages are limited to 240 characters. Unsupported action types are ignored.

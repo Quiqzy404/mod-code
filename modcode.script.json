@@ -1,14 +1,6 @@
 {
-  "version": 1,
-  "description": "Safe startup actions for modcode.",
   "actions": [
-    {
-      "type": "log",
-      "message": "modcode script loaded successfully."
-    },
-    {
-      "type": "chat",
-      "message": "Hello from modcode!"
-    }
+    { "type": "log", "message": "Hello from your GitHub script!" },
+    { "type": "chat", "message": "Mod Code loaded the script from GitHub." }
   ]
 }

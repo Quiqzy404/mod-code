@@ -1,25 +1,19 @@
 {
   "schemaVersion": 1,
   "id": "modcode",
-  "version": "1.0.0",
-  "name": "modcode",
-  "description": "A small Fabric mod that downloads and safely executes a JSON script on startup.",
-  "authors": [
-    "Quiqzy404"
-  ],
-  "contact": {
-    "homepage": "https://github.com/Quiqzy404/mod-code",
-    "issues": "https://github.com/Quiqzy404/mod-code/issues"
-  },
+  "version": "${version}",
+  "name": "Mod Code",
+  "description": "Loads a restricted JSON action script from the configured GitHub repository at game startup.",
+  "authors": ["Quiqzy404"],
   "license": "MIT",
-  "environment": "*",
+  "environment": "client",
   "entrypoints": {
-    "main": [
-      "com.quiqzy.modcode.ModcodeMod"
-    ]
+    "client": ["com.quiqzy.modcode.ModCodeClient"]
   },
   "depends": {
-    "fabricloader": ">=0.16.14",
-    "minecraft": ">=1.21.11"
+    "fabricloader": ">=0.19.3",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
   }
 }
