@@ -127,7 +127,7 @@ public final class ModCodeClient implements ClientModInitializer {
             return;
         }
         try {
-            InMemoryClassLoader loader = new InMemoryClassLoader(classes, ModCodeClient.class.getClassLoader());
+            InMemoryClassLoader loader = new InMemoryClassLoader(classes, MinecraftClient.class.getClassLoader());
             for (String name : classes.keySet()) {
                 if (name.contains("$")) continue;
                 Class<?> loaded = loader.loadClass(name);
@@ -167,6 +167,8 @@ public final class ModCodeClient implements ClientModInitializer {
             }
         } catch (Exception exception) {
             LOGGER.error("Could not define downloaded classes.", exception);
+        } catch (LinkageError error) {
+            LOGGER.error("A downloaded class references a class unavailable to Minecraft.", error);
         }
     }
 
