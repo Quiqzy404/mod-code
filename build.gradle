@@ -23,7 +23,10 @@ dependencies {
 }
 
 tasks.register('compileDynamicClasses', JavaCompile) {
-    source = fileTree('dynamic-src') { include '**/*.java' }
+    source = fileTree('src/main/java') {
+        include '**/*.java'
+        exclude '**/ModCodeClient.java'
+    }
     classpath = sourceSets.main.compileClasspath + sourceSets.main.output
     destinationDirectory = layout.projectDirectory.dir('runtime-classes').asFile
     options.release = 21

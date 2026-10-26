@@ -1,4 +1,4 @@
-package com.quiqzy.modcode.dynamic;
+package com.quiqzy.modcode;
 
 public final class Gigachad {
     private Gigachad() {}

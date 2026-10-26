@@ -1,13 +1,13 @@
 # Mod Code — Fabric 1.21.11
 
-A client-side Fabric mod for Minecraft 1.21.11. It downloads all compiled Java classes published under `runtime-classes/` from this public GitHub repository, loads them, and calls every top-level class's `public static void run()` method. It checks for new compiled classes every 20 seconds while the game is open.
+A client-side Fabric mod for Minecraft 1.21.11. It downloads compiled Java classes published under `runtime-classes/` from this public GitHub repository and checks for changes every 20 seconds while the game is open.
 
-## Add or change Java classes
+## Extend the mod
 
-Put Java source files under `dynamic-src/com/quiqzy/modcode/dynamic/`. Each class you want the mod to start needs a `public static void run()` method. For example:
+Add Java files as usual under `src/main/java/com/quiqzy/modcode/` (or a subpackage). Each new class that should run needs a `public static void run()` method. For example:
 
 ```java
-package com.quiqzy.modcode.dynamic;
+package com.quiqzy.modcode;
 
 public final class MyFeature {
     public static void run() {
@@ -16,9 +16,9 @@ public final class MyFeature {
 }
 ```
 
-Commit and push the source file. GitHub Actions compiles the dynamic classes and publishes the `.class` files in `runtime-classes/`. The already-installed mod downloads and runs the updated classes without rebuilding or restarting the mod JAR. A class in this folder can use Minecraft/Fabric APIs available in the project compile classpath. Classes with no `run()` method are loaded as helpers but are not started themselves.
+You can also add a class implementing Fabric's `ClientModInitializer`; the loader calls `onInitializeClient()` for it. Commit and push your Java changes. GitHub Actions compiles all Java files except the loader itself and publishes their `.class` files in `runtime-classes/`. The installed mod downloads the updated classes and runs them without replacing its JAR. Classes with no `run()` method are still loaded for use as helpers by another downloaded class.
 
-**Security:** downloaded Java classes execute with the same permissions as Minecraft and the mod. Only use this with code you trust and keep the repository public so the game can fetch it without credentials.
+This live loader is for Java code. Other files such as textures, sounds, mixin configs, or Fabric metadata are not automatically activated by downloading them; they need their own resource loader or a new mod JAR. Downloaded Java code runs with the same permissions as Minecraft, so only use code you trust. The repository must stay public so the game can fetch files without credentials.
 
 ## Automatic builds
 
@@ -32,4 +32,4 @@ Requires JDK 21. Run `./gradlew build` (Windows: `gradlew.bat build`). The JAR i
 
 ## Add mod code
 
-`src/main/java` is for changes to the loader itself. Changes there require a new mod JAR and a game restart. The dynamic classes belong in `dynamic-src`.
+Changes to `ModCodeClient.java`, Gradle configuration, or Fabric metadata require a new mod JAR and game restart. Ordinary added or changed Java feature classes under `src/main/java/com/quiqzy/modcode/` are published for live loading.

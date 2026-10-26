@@ -31,7 +31,7 @@ public final class ModCodeClient implements ClientModInitializer {
     private static final int MAX_INDEX_BYTES = 64 * 1024;
     private static final int MAX_CLASS_COUNT = 100;
     private static final int MAX_TOTAL_CLASS_BYTES = 4 * 1024 * 1024;
-    private static final String DYNAMIC_PACKAGE = "com.quiqzy.modcode.dynamic.";
+    private static final String DYNAMIC_PACKAGE = "com.quiqzy.modcode.";
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(5))
             .followRedirects(HttpClient.Redirect.NORMAL)
@@ -112,9 +112,13 @@ public final class ModCodeClient implements ClientModInitializer {
     }
 
     private static String classNameFor(String path) {
-        String prefix = DYNAMIC_PACKAGE.replace('.', '/') ;
+        String prefix = DYNAMIC_PACKAGE.replace('.', '/');
         if (!path.startsWith(prefix) || !path.endsWith(".class") || path.contains("..")) return null;
-        return path.substring(0, path.length() - ".class".length()).replace('/', '.');
+        String name = path.substring(0, path.length() - ".class".length()).replace('/', '.');
+        if (name.equals(ModCodeClient.class.getName()) || name.startsWith(ModCodeClient.class.getName() + "$")) {
+            return null;
+        }
+        return name;
     }
 
     private static void loadAndRun(Map<String, byte[]> classes) {
@@ -127,6 +131,12 @@ public final class ModCodeClient implements ClientModInitializer {
             for (String name : classes.keySet()) {
                 if (name.contains("$")) continue;
                 Class<?> loaded = loader.loadClass(name);
+                if (ClientModInitializer.class.isAssignableFrom(loaded)) {
+                    ClientModInitializer initializer = (ClientModInitializer) loaded.getDeclaredConstructor().newInstance();
+                    initializer.onInitializeClient();
+                    LOGGER.info("Initialized downloaded client class {}", name);
+                    continue;
+                }
                 try {
                     Method run = loaded.getMethod("run");
                     if (!Modifier.isStatic(run.getModifiers()) || run.getParameterCount() != 0) {
