@@ -1,9 +1,96 @@
+
+plugins {
+    id 'net.fabricmc.fabric-loom-remap' version '1.17.21'
+    id 'maven-publish'
+}
+
+version = project.mod_version
+group = project.maven_group
+
+base {
+    archivesName = project.archives_base_name
+}
+
 dependencies {
-    // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
-    // FÜGE DIESE ZEILE HINZU:
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 21
+    options.encoding = "UTF-8"
+}
+
+/*
+ * Compiles helper classes and publishes them into runtime-classes.
+ * ModCodeClient stays in the main mod and is never hot-loaded.
+ */
+tasks.register("generateDynamicClassIndex") {
+    dependsOn tasks.named("classes")
+
+    doLast {
+        def packagePath = "com/quiqzy/modcode"
+        def outputDir = file("runtime-classes")
+        def dynamicDir = new File(outputDir, packagePath)
+        def classRoot = layout.buildDirectory
+                .dir("classes/java/main").get().asFile
+
+        // Remove old helper classes to prevent stale downloads.
+        if (dynamicDir.exists()) {
+            fileTree(dynamicDir)
+                .matching { include "**/*.class" }
+                .files.each { delete it }
+        }
+
+        dynamicDir.mkdirs()
+
+        def classFiles = fileTree(classRoot).matching {
+            include "${packagePath}/**/*.class"
+            exclude "${packagePath}/ModCodeClient*.class"
+        }.files.sort { a, b -> a.path <=> b.path }
+
+        classFiles.each { classFile ->
+            def relativePath = classRoot.toPath()
+                .relativize(classFile.toPath())
+                .toString()
+                .replace(File.separator, "/")
+
+            copy {
+                from classFile
+                into outputDir
+                eachFile { details ->
+                    details.path = relativePath
+                }
+                includeEmptyDirs = false
+            }
+        }
+
+        def indexFile = new File(outputDir, "class-index.txt")
+        indexFile.text = classFiles.collect { classFile ->
+            classRoot.toPath()
+                .relativize(classFile.toPath())
+                .toString()
+                .replace(File.separator, "/")
+        }.join("\n")
+
+        if (!classFiles.isEmpty()) {
+            indexFile.text += "\n"
+        }
+
+        println "Generated runtime class index with ${classFiles.size()} class file(s)."
+    }
+}
+
+tasks.named("build") {
+    dependsOn tasks.named("generateDynamicClassIndex")
 }
