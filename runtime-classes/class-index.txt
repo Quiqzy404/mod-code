@@ -1,1 +1,3 @@
+com/quiqzy/modcode/AppleGlassGui$AppleGlassScreen.class
+com/quiqzy/modcode/AppleGlassGui.class
 com/quiqzy/modcode/AutoRelog.class
