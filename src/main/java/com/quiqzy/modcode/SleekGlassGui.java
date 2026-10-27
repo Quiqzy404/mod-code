@@ -109,7 +109,6 @@ public class SleekGlassGui {
 
             drawClose(c, x + W - 24, y + 24, mx, my);
 
-            // Sidebar
             int sidebarX = x + 20;
             int sidebarY = y + 70;
             int sidebarW = 180;
@@ -126,7 +125,6 @@ public class SleekGlassGui {
                 ny += 42;
             }
 
-            // Hauptbereich
             int contentX = x + 220;
             int contentW = W - 220 - 40;
             int contentY = y + 70;
