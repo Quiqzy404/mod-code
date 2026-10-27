@@ -1,88 +1,44 @@
 plugins {
-    id 'net.fabricmc.fabric-loom-remap' version '1.14.10'
+    id 'fabric-loom' version '1.7-SNAPSHOT' // Oder die neueste stabile Version
     id 'maven-publish'
 }
 
 version = project.mod_version
 group = project.maven_group
 
-base {
-    archivesName = project.archives_base_name
-}
-
 repositories {
-    mavenCentral()
+    // Add repositories to retrieve artifacts from in here.
+    // You don't need to add specific repos here unless required
 }
 
 dependencies {
-
-dependencies {
-    // Minecraft & Yarn Mappings (Beispiel für 1.20.1, passe das an deine Version an)
-    minecraft "com.mojang:minecraft:1.20.1"
-    mappings "net.fabricmc:yarn:1.20.1+build.10:v2"
-    
-    // Fabric Loader
-    modImplementation "net.fabricmc:fabric-loader:0.14.22"
-    
-    // WICHTIG: Die Fabric API muss hier drin sein!
-    modImplementation "net.fabricmc.fabric-api:fabric-api:0.92.0+1.20.1"
-
+    // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-
-}
-
-tasks.register('compileDynamicClasses', JavaCompile) {
-    source = fileTree('src/main/java') {
-        include '**/*.java'
-        exclude '**/ModCodeClient.java'
-    }
-    classpath = sourceSets.main.compileClasspath + sourceSets.main.output
-    destinationDirectory = layout.projectDirectory.dir('runtime-classes').asFile
-    options.release = 21
-    options.encoding = 'UTF-8'
-    doFirst {
-        delete destinationDirectory.get().asFile
-    }
-}
-
-tasks.register('generateDynamicClassIndex') {
-    dependsOn tasks.named('remapJar')
-    doLast {
-        def outputDir = layout.projectDirectory.dir('runtime-classes').asFile
-        delete outputDir
-        outputDir.mkdirs()
-
-        def remapJarFile = tasks.named('remapJar').get().archiveFile.get().asFile
-        copy {
-            from zipTree(remapJarFile)
-            into outputDir
-            include 'com/quiqzy/modcode/**/*.class'
-            exclude '**/ModCodeClient*.class'
-        }
-
-        def classFiles = fileTree(outputDir) { include '**/*.class' }
-                .files
-                .collect { outputDir.toPath().relativize(it.toPath()).toString().replace('\\', '/') }
-                .sort()
-        new File(outputDir, 'class-index.txt').text = classFiles.join('\n') + (classFiles ? '\n' : '')
-    }
+    
+    // WICHTIG: Die Fabric API muss hier hinzugefügt werden!
+    modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
 processResources {
-    inputs.property 'version', project.version
-    filesMatching('fabric.mod.json') { expand 'version': project.version }
+    inputs.property "version", project.version
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version
+    }
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 21
-    options.encoding = 'UTF-8'
+    it.options.release = 21
 }
 
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(21)
     withSourcesJar()
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
+jar {
+    from("LICENSE") {
+        rename { "${it}_${project.archivesBaseName}" }
+    }
+}
