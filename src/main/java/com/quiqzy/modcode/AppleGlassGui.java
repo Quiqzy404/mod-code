@@ -347,11 +347,11 @@ public class AppleGlassGui {
 
             g.setFont(boldFont);
             g.setColor(new Color(255, 255, 255));
-            g.drawString("Auto-Relog Schutz", c2X + 14 * s, c2Y + 22 * s);
+            g.drawString("Auto-Relog", c2X + 14 * s, c2Y + 22 * s);
 
             g.setFont(textFont);
             g.setColor(new Color(138, 147, 160));
-            g.drawString("Verbindung bei Absturz sichern", c2X + 14 * s, c2Y + 39 * s);
+            g.drawString("Automatischer Reconnect bei Y = -4", c2X + 14 * s, c2Y + 39 * s);
 
             // Apple iOS Style Pill Toggle Switch
             float pW = 48 * s;
