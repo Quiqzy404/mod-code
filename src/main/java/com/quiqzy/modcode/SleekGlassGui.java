@@ -18,6 +18,7 @@ import java.awt.*;
 import java.awt.geom.*;
 import java.awt.image.*;
 import java.util.*;
+import java.util.List;
 
 public class SleekGlassGui {
     private static boolean registered = false;
@@ -46,17 +47,17 @@ public class SleekGlassGui {
         private boolean drag = false;
         private double dragX, dragY;
 
-        private final List<String> categories = List.of("Combat", "Movement", "Player", "Render", "World", "Misc", "Settings");
+        private final List<String> categories = java.util.List.of("Combat", "Movement", "Player", "Render", "World", "Misc", "Settings");
         private String selected = "Combat";
 
-        private final List<Module> modules = List.of(
+        private final List<Module> modules = java.util.List.of(
                 new Module("KillAura", "Angreift Ziele automatisch.", true, null, 0, 0, 0, null),
                 new Module("Velocity", "Reduziert Rückstoß.", false, null, 0, 0, 0, null),
                 new Module("Criticals", "Kritische Treffer erzwingen.", false, null, 0, 0, 0, null),
                 new Module("AutoClicker", "Schnelles Klicken.", false, "CPS", 10, 1, 20, null),
                 new Module("XRay", "Blöcke durchsichtig machen.", false, null, 0, 0, 0, null),
                 new Module("NoFall", "Kein Fallschaden.", true, null, 0, 0, 0, null),
-                new Module("ESP", "Entitäten markieren.", false, "Mode", 0, 0, 0, List.of("Box", "Name")),
+                new Module("ESP", "Entitäten markieren.", false, "Mode", 0, 0, 0, java.util.List.of("Box", "Name")),
                 new Module("Speed", "Schneller laufen.", false, "Speed", 1, 1, 3, null),
                 new Module("Fly", "Fliegen.", false, null, 0, 0, 0, null),
                 new Module("Scaffold", "Auto-Bauen.", false, null, 0, 0, 0, null),
@@ -143,7 +144,7 @@ public class SleekGlassGui {
             int startY = contentY + 50;
             int ty = startY - scrollY;
 
-            List<Module> vis = modules.stream()
+            java.util.List<Module> vis = modules.stream()
                     .filter(m -> search.isEmpty() || m.name().toLowerCase().contains(search.toLowerCase()))
                     .toList();
 
@@ -265,7 +266,7 @@ public class SleekGlassGui {
             int cardH = 56;
             int gap = 10;
             int ty = startY - scrollY;
-            List<Module> vis = modules.stream()
+            java.util.List<Module> vis = modules.stream()
                     .filter(m -> search.isEmpty() || m.name().toLowerCase().contains(search.toLowerCase()))
                     .toList();
             for (int i = 0; i < vis.size(); i++) {
@@ -370,7 +371,7 @@ public class SleekGlassGui {
                 int value,
                 int min,
                 int max,
-                List<String> options
+                java.util.List<String> options
         ) {
             boolean hasSlider() { return sliderLabel != null; }
         }
