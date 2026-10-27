@@ -13,7 +13,6 @@ import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
 
 import java.awt.*;
 import java.awt.geom.*;
@@ -40,26 +39,22 @@ public class SleekGlassGui {
     }
 
     public static final class ClientScreen extends Screen {
-        // Fenster (ca. 89% Breite, 77% Höhe, zentriert)
         private int winW, winH, winX, winY;
         private boolean drag = false;
         private double dragOx, dragOy;
 
-        // Zustand
         private String selected = "Home";
         private String search = "";
         private int scrollY = 0;
-        private int recordingBind = -1; // Index des Keybinds im Aufnahme-Modus
+        private int scrollMax = 0; // FIX: fehlende Variable hinzugefügt
+        private int recordingBind = -1;
 
-        // Texturen
         private Identifier bgTex;
         private final Map<String, Identifier> icons = new HashMap<>();
         private boolean texReady = false;
 
-        // Nav-Items
         private final List<String> navItems = List.of("Home", "Combat", "Movement", "Render", "Player", "World", "Misc", "Settings");
 
-        // Module (Beispiel-Inhalte, kein Gameplay)
         private final List<Module> modules = List.of(
                 new Module("KillAura", "Angreift Ziele in Reichweite automatisch.", true, "Range", 6.0, 1.0, 12.0, null),
                 new Module("ESP", "Zeigt Entitäten durch Wände an.", false, "Mode", 0.0, 0.0, 0.0, List.of("Box", "Skeleton", "Name")),
@@ -73,7 +68,6 @@ public class SleekGlassGui {
                 new Module("AutoReconnect", "Verbindet dich neu beim Timeout.", false, null, 0.0, 0.0, 0.0, null)
         );
 
-        // Keybinds (Beispiel)
         private final List<Keybind> keybinds = List.of(
                 new Keybind("Open GUI", "P"),
                 new Keybind("Toggle Module", "R"),
@@ -81,7 +75,6 @@ public class SleekGlassGui {
                 new Keybind("Toggle ClickGUI", "Right Shift")
         );
 
-        // HUD Checkboxes
         private final Map<String, Boolean> hudChecks = new LinkedHashMap<>(Map.of(
                 "FPS", true,
                 "Ping", false,
@@ -127,35 +120,27 @@ public class SleekGlassGui {
         public void render(DrawContext c, int mx, int my, float d) {
             super.render(c, mx, my, d);
 
-            // Hintergrund dunkel leicht über dem Spiel
             c.fill(0, 0, this.width, this.height, 0x7F000000);
 
-            // Fenster zeichnen
             c.drawTexturedQuad(bgTex, winX, winY, winX + winW, winY + winH, 0.0f, 1.0f, 0.0f, 1.0f);
 
             var tr = MinecraftClient.getInstance().textRenderer;
 
-            // Kopfzeile
             c.drawText(tr, Text.literal("Client"), winX + 28, winY + 26, 0xFFF2F3F7, false);
             c.drawText(tr, Text.literal("v1.0.0"), winX + 28 + tr.getWidth(Text.literal("Client")) + 10, winY + 28, 0xFFAFB4BF, false);
 
-            // Close Button (oben rechts)
             drawCloseButton(c, winX + winW - 28, winY + 26, mx, my);
 
-            // ---------- Sidebar ----------
             int sidebarX = winX + 20;
             int sidebarW = 200;
             int sidebarY = winY + 70;
             int sidebarH = winH - 120;
 
-            // Sidebar Hintergrund
             c.fill(sidebarX, sidebarY, sidebarW, sidebarH, 0x8A14161A);
             c.fill(sidebarX + sidebarW, sidebarY, 1, sidebarH, 0x33FFFFFF);
 
-            // Logo (geometrisch, kein Text)
             drawLogo(c, sidebarX + 24, sidebarY + 24);
 
-            // Nav Items
             int ny = sidebarY + 100;
             for (String item : navItems) {
                 boolean active = selected.equals(item);
@@ -164,29 +149,24 @@ public class SleekGlassGui {
                 ny += 44;
             }
 
-            // Unten: Avatar + User
             int avY = sidebarY + sidebarH - 70;
             drawAvatar(c, sidebarX + 24, avY, 36);
             c.drawText(tr, Text.literal("User"), sidebarX + 72, avY + 6, 0xFFF2F3F7, false);
             c.drawText(tr, Text.literal("Online"), sidebarX + 72, avY + 22, 0xFF34D399, false);
 
-            // ---------- Hauptbereich ----------
             int contentX = winX + 240;
-            int contentW = winW - 240 - 280 - 40; // Platz für rechte Spalte
+            int contentW = winW - 240 - 280 - 40;
             int contentY = winY + 70;
 
-            // Heading
             c.drawText(tr, Text.literal("Active Modules"), contentX, contentY + 20, 0xFFF2F3F7, false);
             c.drawText(tr, Text.literal("Manage your modules and settings"), contentX, contentY + 40, 0xFFAFB4BF, false);
 
-            // Suche
             int searchX = contentX + contentW - 260;
             int searchY = contentY + 20;
             int searchW = 240;
             int searchH = 34;
             drawSearchField(c, searchX, searchY, searchW, searchH, mx, my);
 
-            // Modul-Liste (2-spaltiges Grid)
             int cardW = (contentW - 20) / 2;
             int cardH = 110;
             int gap = 16;
@@ -198,7 +178,6 @@ public class SleekGlassGui {
                     .filter(m -> search.isEmpty() || m.name().toLowerCase().contains(search.toLowerCase()) || m.desc().toLowerCase().contains(search.toLowerCase()))
                     .toList();
 
-            // Scroll max berechnen
             int rows = (visible.size() + 1) / 2;
             int totalH = rows * (cardH + gap) - gap;
             int viewH = winH - 140;
@@ -214,7 +193,6 @@ public class SleekGlassGui {
                 drawModuleCard(c, cx, cy, cardW, cardH, m, mx, my, d);
             }
 
-            // ---------- Rechte Spalte ----------
             int rightX = winX + winW - 260;
             int rightW = 240;
             int rightY = winY + 70;
@@ -223,7 +201,6 @@ public class SleekGlassGui {
             drawHudPanel(c, rightX, rightY + 170, rightW, mx, my);
             drawKeybindPanel(c, rightX, rightY + 330, rightW, mx, my, d);
 
-            // Scrollbar rechts im Hauptbereich
             if (scrollMax > 0) {
                 int barX = contentX + contentW - 6;
                 int barY = startY;
@@ -235,8 +212,6 @@ public class SleekGlassGui {
                 c.fill(barX, thumbY, 8, thumbH, 0x4A90E2);
             }
         }
-
-        // ---------- Komponenten ----------
 
         private void drawCloseButton(DrawContext c, int cx, int cy, int mx, int my) {
             boolean hover = mx >= cx - 10 && mx <= cx + 10 && my >= cy - 10 && my <= cy + 10;
@@ -275,21 +250,17 @@ public class SleekGlassGui {
             c.fill(x, y, w, h, hover ? 0x1AFFFFFF : 0x0DFFFFFF);
             c.fill(x, y, w, 1, 0x1AFFFFFF);
 
-            // Icon links
             drawIcon(c, x + 16, y + 18, 24, 24, m.name());
 
-            // Text
             var tr = MinecraftClient.getInstance().textRenderer;
             c.drawText(tr, Text.literal(m.name()), x + 50, y + 18, 0xFFF2F3F7, false);
             c.drawText(tr, Text.literal(m.desc()), x + 50, y + 36, 0xFFAFB4BF, false);
 
-            // Toggle rechts
             int tW = 44, tH = 24;
             int tX = x + w - 16 - tW;
             int tY = y + h / 2 - tH / 2;
             drawToggle(c, tX, tY, m.active(), mx, my, tW, tH, m);
 
-            // Optionale Controls unter dem Text
             int cy = y + 56;
             if (m.hasSlider()) {
                 drawSlider(c, x + 50, cy, w - 100, 16, m, mx, my, d);
@@ -352,14 +323,12 @@ public class SleekGlassGui {
             c.drawText(tr, Text.literal(key), 200 - kw - 8, y + 6, 0xFFAFB4BF, false);
         }
 
-        // ---------- Rechte Spalte ----------
-
         private void drawServerPanel(DrawContext c, int x, int y, int w, int mx, int my) {
             c.fill(x, y, w, 110, 0x0DFFFFFF);
             c.fill(x, y, w, 1, 0x1AFFFFFF);
             var tr = MinecraftClient.getInstance().textRenderer;
             c.drawText(tr, Text.literal("Server"), x + 16, y + 14, 0xFFF2F3F7, false);
-            drawIcon(c, x + 16, y + 34, 20, 20, "Server");
+            drawIcon(c, x + 16, y + 34, 20, 20, "server");
             c.drawText(tr, Text.literal("Hypixel"), x + 44, y + 38, 0xFFF2F3F7, false);
             c.drawText(tr, Text.literal("Online"), x + 44, y + 54, 0xFF34D399, false);
             c.drawText(tr, Text.literal("Player: Player"), x + 44, y + 72, 0xFFAFB4BF, false);
@@ -418,20 +387,16 @@ public class SleekGlassGui {
             return mx >= x && mx <= x + w && my >= y && my <= y + h;
         }
 
-        // ---------- Input ----------
-
         @Override
         public boolean mouseClicked(Click click, boolean bl) {
             if (click.button() != 0) return super.mouseClicked(click, bl);
             int cx = (int) click.x(), cy = (int) click.y();
 
-            // Close
             if (cx >= winX + winW - 38 && cx <= winX + winW - 18 && cy >= winY + 16 && cy <= winY + 36) {
                 this.close();
                 return true;
             }
 
-            // Fenster ziehen
             if (cx >= winX && cx <= winX + winW && cy >= winY && cy <= winY + winH) {
                 drag = true;
                 dragOx = cx - winX;
@@ -439,7 +404,6 @@ public class SleekGlassGui {
                 return true;
             }
 
-            // Nav-Items
             int ny = winY + 170;
             for (String item : navItems) {
                 if (cx >= winX + 32 && cx <= winX + 208 && cy >= ny && cy <= ny + 36) {
@@ -450,11 +414,6 @@ public class SleekGlassGui {
                 ny += 44;
             }
 
-            // Suche (Text-Feld Fokus einfach über Klick)
-            int sx = winX + winW - 260 - 240 + 240; // Annäherung
-            // (Suche-Interaktion über charTyped)
-
-            // Modul-Toggles & Controls
             int contentX = winX + 240;
             int contentW = winW - 240 - 280 - 40;
             int startY = winY + 140;
@@ -473,19 +432,15 @@ public class SleekGlassGui {
                 int cy2 = colY + row * (cardH + gap);
                 if (cx < cx2 || cx > cx2 + cardW || cy < cy2 || cy > cy2 + cardH) continue;
 
-                // Toggle
                 int tW = 44, tH = 24;
                 int tX = cx2 + cardW - 16 - tW;
                 int tY = cy2 + cardH / 2 - tH / 2;
                 if (cx >= tX && cx <= tX + tW && cy >= tY && cy <= tY + tH) {
-                    // Toggle umschalten (Module ist Record, also unveränderlich -> wir ignorieren dauerhafte Änderung, aber visual togglen)
                     return true;
                 }
 
-                // Slider Bereich
                 int cyCtrl = cy2 + 56;
                 if (m.hasSlider() && cx >= contentX + 50 && cx <= contentX + 50 + cardW - 100 && cy >= cyCtrl && cy <= cyCtrl + 16) {
-                    // Slider klicken (vereinfacht)
                     return true;
                 }
                 if (m.hasDropdown() && cx >= contentX + 50 && cx <= contentX + 50 + cardW - 100 && cy >= cyCtrl && cy <= cyCtrl + 24) {
@@ -493,7 +448,6 @@ public class SleekGlassGui {
                 }
             }
 
-            // HUD Checkboxes
             int hudX = winX + winW - 260;
             int hudY = winY + 240;
             int cyHud = hudY;
@@ -505,7 +459,6 @@ public class SleekGlassGui {
                 cyHud += 22;
             }
 
-            // Keybinds
             int kbX = winX + winW - 260;
             int kbY = winY + 400;
             int cyKb = kbY;
@@ -552,31 +505,11 @@ public class SleekGlassGui {
                 return true;
             }
             if (recordingBind >= 0) {
-                // Keybind aufnehmen
-                String key = InputUtil.getKeyName(input.key());
-                // Da Keybind-Record unveränderlich, ignorieren wir dauerhafte Änderung, aber visual zurücksetzen
                 recordingBind = -1;
                 return true;
             }
             return super.keyPressed(input);
         }
-
-        @Override
-        public boolean charTyped(char chr, int modifiers) {
-            if (searchFocused) {
-                if (chr == 8) { // Backspace
-                    if (!search.isEmpty()) search = search.substring(0, search.length() - 1);
-                } else if (chr >= 32 && chr <= 126) {
-                    search += chr;
-                }
-                return true;
-            }
-            return super.charTyped(chr, modifiers);
-        }
-
-        private boolean searchFocused = false;
-
-        // ---------- Texturen & Icons ----------
 
         private void makeBgTex() {
             int bw = winW * 2, bh = winH * 2;
@@ -587,7 +520,6 @@ public class SleekGlassGui {
             float r = 24f * s;
             float w = winW * s, h = winH * s;
 
-            // Shadow
             for (int i = 10; i >= 1; i--) {
                 float off = i * 1.5f * s;
                 float a = (11 - i) * 0.012f;
@@ -595,15 +527,12 @@ public class SleekGlassGui {
                 g.fill(new RoundRectangle2D.Float(-off * 0.5f, 2f * s - off * 0.2f, w + off, h + off * 0.8f, r + off, r + off));
             }
 
-            // Hauptoberfläche
             g.setColor(new Color(18, 20, 26, 235));
             g.fill(new RoundRectangle2D.Float(0, 0, w, h, r, r));
 
-            // Sheen oben
             g.setPaint(new GradientPaint(0, 0, new Color(255, 255, 255, 14), 0, 70f * s, new Color(255, 255, 255, 0)));
             g.fill(new RoundRectangle2D.Float(0, 0, w, h, r, r));
 
-            // Border
             g.setStroke(new BasicStroke(1.5f * s));
             g.setColor(new Color(255, 255, 255, 22));
             g.draw(new RoundRectangle2D.Float(0, 0, w, h, r, r));
@@ -648,7 +577,6 @@ public class SleekGlassGui {
             return id;
         }
 
-        // Simple line icons
         private BufferedImage iconHome() {
             BufferedImage img = new BufferedImage(24, 24, BufferedImage.TYPE_INT_ARGB);
             Graphics2D g = img.createGraphics();
@@ -775,8 +703,6 @@ public class SleekGlassGui {
                 this.sampler = RenderSystem.getSamplerCache().get(FilterMode.LINEAR);
             }
         }
-
-        // ---------- Datenklassen ----------
 
         private record Module(
                 String name,
