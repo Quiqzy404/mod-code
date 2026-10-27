@@ -37,8 +37,8 @@ public class SleekGlassGui {
     }
 
     public static final class GlassBox extends Screen {
-        private static final int W = 300, H = 200;
-        private static final Identifier TEX = Identifier.of("modcode", "glass_box");
+        private static final int W = 420, H = 280;
+        private static final Identifier TEX = Identifier.of("modcode", "sleek_glass");
         private static boolean done = false;
 
         private int x = -1, y = -1;
@@ -46,7 +46,7 @@ public class SleekGlassGui {
         private double ox, oy;
 
         public GlassBox() {
-            super(Text.literal("Glass Box"));
+            super(Text.literal("Sleek Glass"));
         }
 
         @Override
@@ -74,6 +74,10 @@ public class SleekGlassGui {
         public void render(DrawContext c, int mx, int my, float d) {
             super.render(c, mx, my, d);
             c.drawTexturedQuad(TEX, x, y, x + W, y + H, 0f, 1f, 0f, 1f);
+
+            var tr = MinecraftClient.getInstance().textRenderer;
+            c.drawText(tr, Text.literal("Sleek Glass"), x + 24, y + 22, 0xFFF2F3F7, false);
+            c.drawText(tr, Text.literal("Liquid Glass · Drücke [P]"), x + 24, y + 40, 0xFFAFB4BF, false);
         }
 
         @Override
@@ -120,11 +124,50 @@ public class SleekGlassGui {
             BufferedImage img = new BufferedImage(bw, bh, BufferedImage.TYPE_INT_ARGB);
             Graphics2D g = img.createGraphics();
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
             float s = 2f;
-            float r = 24f * s;
+            float r = 28f * s;
+
+            // 1. Mehrschichtiger weicher Drop-Shadow
+            for (int i = 10; i >= 1; i--) {
+                float off = i * 1.5f * s;
+                float a = (11 - i) * 0.015f;
+                g.setColor(new Color(0, 0, 0, a));
+                g.fill(new RoundRectangle2D.Float(-off * 0.5f, 2f * s - off * 0.2f, W * s + off, H * s + off * 0.8f, r + off, r + off));
+            }
+
+            // 2. Dunkel durchscheinender Glaskörper (Frosted Glass)
             RoundRectangle2D.Float body = new RoundRectangle2D.Float(0, 0, W * s, H * s, r, r);
-            g.setColor(new Color(30, 32, 40, 130));
+            g.setColor(new Color(22, 25, 33, 135));
             g.fill(body);
+
+            // 3. Specular Sheen (Lichtreflexion oben)
+            g.setPaint(new GradientPaint(0, 0, new Color(255, 255, 255, 35), 0, 70f * s, new Color(255, 255, 255, 0)));
+            g.fill(body);
+
+            // 4. Feiner heller Glass-Rand (Bezel)
+            g.setStroke(new BasicStroke(1.5f * s));
+            g.setColor(new Color(255, 255, 255, 45));
+            g.draw(body);
+
+            // 5. Top-Highlight Linie
+            g.setStroke(new BasicStroke(1f * s));
+            g.setColor(new Color(255, 255, 255, 30));
+            g.drawLine((int) (12 * s), (int) (32 * s), (int) (W * s - 12 * s), (int) (32 * s));
+
+            // 6. Dezente Apple-ähnliche Traffic Lights (nur Zierde, nicht klickbar)
+            float tlY = 19f * s;
+            float tlR = 5f * s;
+            float[] xs = {22f * s, 38f * s, 54f * s};
+            Color[] c1 = {new Color(255, 95, 86), new Color(255, 189, 46), new Color(39, 201, 63)};
+            Color[] c2 = {new Color(224, 68, 62), new Color(222, 161, 35), new Color(26, 171, 41)};
+            for (int i = 0; i < 3; i++) {
+                g.setColor(c1[i]);
+                g.fill(new Ellipse2D.Float(xs[i] - tlR, tlY - tlR, tlR * 2, tlR * 2));
+                g.setColor(c2[i]);
+                g.draw(new Ellipse2D.Float(xs[i] - tlR, tlY - tlR, tlR * 2, tlR * 2));
+            }
+
             g.dispose();
 
             NativeImage ni = new NativeImage(NativeImage.Format.RGBA, bw, bh, false);
@@ -140,7 +183,7 @@ public class SleekGlassGui {
 
         static final class LinearTexture extends NativeImageBackedTexture {
             LinearTexture(NativeImage image) {
-                super(() -> "glass_box", image);
+                super(() -> "sleek_glass", image);
                 this.sampler = RenderSystem.getSamplerCache().get(FilterMode.LINEAR);
             }
         }
