@@ -15,6 +15,18 @@ repositories {
 }
 
 dependencies {
+
+dependencies {
+    // Minecraft & Yarn Mappings (Beispiel für 1.20.1, passe das an deine Version an)
+    minecraft "com.mojang:minecraft:1.20.1"
+    mappings "net.fabricmc:yarn:1.20.1+build.10:v2"
+    
+    // Fabric Loader
+    modImplementation "net.fabricmc:fabric-loader:0.14.22"
+    
+    // WICHTIG: Die Fabric API muss hier drin sein!
+    modImplementation "net.fabricmc.fabric-api:fabric-api:0.92.0+1.20.1"
+
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
