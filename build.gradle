@@ -37,9 +37,20 @@ tasks.register('compileDynamicClasses', JavaCompile) {
 }
 
 tasks.register('generateDynamicClassIndex') {
-    dependsOn tasks.named('compileDynamicClasses')
+    dependsOn tasks.named('remapJar')
     doLast {
         def outputDir = layout.projectDirectory.dir('runtime-classes').asFile
+        delete outputDir
+        outputDir.mkdirs()
+
+        def remapJarFile = tasks.named('remapJar').get().archiveFile.get().asFile
+        copy {
+            from zipTree(remapJarFile)
+            into outputDir
+            include 'com/quiqzy/modcode/**/*.class'
+            exclude '**/ModCodeClient*.class'
+        }
+
         def classFiles = fileTree(outputDir) { include '**/*.class' }
                 .files
                 .collect { outputDir.toPath().relativize(it.toPath()).toString().replace('\\', '/') }

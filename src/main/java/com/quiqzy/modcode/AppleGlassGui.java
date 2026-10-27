@@ -12,6 +12,7 @@ public class AppleGlassGui {
 
     private static boolean registered = false;
     private static boolean wasKeyPressed = false;
+    private static boolean welcomeMessageSent = false;
 
     // Gespeicherte Fensterposition für die aktuelle Spielsitzung
     private static int windowX = -1;
@@ -21,6 +22,8 @@ public class AppleGlassGui {
     public static boolean autoRelogEnabled = true;
 
     public static void register() {
+        System.out.println("[ModCode] gui klapt! AppleGlassGui wurde erfolgreich geladen.");
+
         if (registered) {
             return;
         }
@@ -29,6 +32,12 @@ public class AppleGlassGui {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client == null || client.getWindow() == null) {
                 return;
+            }
+
+            // Beim Spielstart/Server-Beitritt sofortige Bestätigung im Chat senden
+            if (!welcomeMessageSent && client.player != null) {
+                client.player.sendMessage(Text.literal("§a[ModCode] §fGUI klappt! Drücke [Ü] zum Öffnen."), false);
+                welcomeMessageSent = true;
             }
 
             // Auf deutschem Tastaturlayout (QWERTZ) ist die physische Taste für 'Ü' der GLFW_KEY_LEFT_BRACKET (91).
