@@ -1,44 +1,9 @@
-plugins {
-    id 'fabric-loom' version '1.7-SNAPSHOT' // Oder die neueste stabile Version
-    id 'maven-publish'
-}
-
-version = project.mod_version
-group = project.maven_group
-
-repositories {
-    // Add repositories to retrieve artifacts from in here.
-    // You don't need to add specific repos here unless required
-}
-
 dependencies {
     // To change the versions see the gradle.properties file
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
-    
-    // WICHTIG: Die Fabric API muss hier hinzugefügt werden!
+    modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+
+    // FÜGE DIESE ZEILE HINZU:
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
-}
-
-processResources {
-    inputs.property "version", project.version
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version
-    }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    it.options.release = 21
-}
-
-java {
-    withSourcesJar()
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
-}
-
-jar {
-    from("LICENSE") {
-        rename { "${it}_${project.archivesBaseName}" }
-    }
 }
