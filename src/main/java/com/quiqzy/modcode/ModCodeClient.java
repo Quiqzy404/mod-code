@@ -1,155 +1,202 @@
 package com.quiqzy.modcode;
 
-import com.mojang.blaze3d.systems.RenderSystem;
-import com.mojang.blaze3d.textures.FilterMode;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.api.ClientModInitializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.Click;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.input.KeyInput;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 
-import java.awt.*;
-import java.awt.geom.*;
-import java.awt.image.*;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.time.Duration;
+import java.util.HashMap;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-public class SleekGlassGui {
-    private static boolean registered = false;
-    private static boolean wasKey = false;
+public final class ModCodeClient implements ClientModInitializer {
+    private static final Logger LOGGER = LoggerFactory.getLogger("modcode");
+    private static final String RAW_BASE =
+            "https://raw.githubusercontent.com/Quiqzy404/mod-code/main/runtime-classes/";
+    private static final URI INDEX_URI = URI.create(RAW_BASE + "class-index.txt");
+    private static final int MAX_INDEX_BYTES = 64 * 1024;
+    private static final int MAX_CLASS_COUNT = 100;
+    private static final int MAX_TOTAL_CLASS_BYTES = 4 * 1024 * 1024;
+    private static final String DYNAMIC_PACKAGE = "com.quiqzy.modcode.";
+    private static final HttpClient HTTP = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(5))
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .build();
+    private static final ScheduledExecutorService SCRIPT_POLLER = Executors.newSingleThreadScheduledExecutor(task -> {
+        Thread thread = new Thread(task, "modcode-script-poller");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private volatile String lastLoadedHash = "";
 
-    public static void register() {
-        if (registered) return;
-        registered = true;
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client == null || client.getWindow() == null) return;
-            boolean down = InputUtil.isKeyPressed(client.getWindow(), InputUtil.GLFW_KEY_P);
-            if (down && !wasKey) {
-                if (client.currentScreen == null) client.setScreen(new GlassScreen());
-                else if (client.currentScreen instanceof GlassScreen) client.setScreen(null);
-            }
-            wasKey = down;
-        });
+    @Override
+    public void onInitializeClient() {
+        LOGGER.info("Mod Code is running. Checking GitHub for compiled Java classes every 5 seconds.");
+        SCRIPT_POLLER.scheduleWithFixedDelay(this::checkForClasses, 0, 5, TimeUnit.SECONDS);
     }
 
-    public static final class GlassScreen extends Screen {
-        private static final int W = 400, H = 300;
-        private static final Identifier TEX = Identifier.of("modcode", "sleek_glass");
-        private static boolean done = false;
-
-        private int x = -1, y = -1;
-        private boolean drag = false;
-        private double ox, oy;
-
-        public GlassScreen() {
-            super(Text.literal("Glass GUI"));
-        }
-
-        @Override
-        protected void init() {
-            super.init();
-            if (x == -1 || y == -1) {
-                x = (this.width - W) / 2;
-                y = (this.height - H) / 2;
+    private void checkForClasses() {
+        try {
+            byte[] indexBytes = getBytes(INDEX_URI, MAX_INDEX_BYTES);
+            if (indexBytes == null) return;
+            String index = new String(indexBytes, StandardCharsets.UTF_8);
+            String[] paths = index.lines().map(String::trim).filter(line -> !line.isEmpty()).toArray(String[]::new);
+            if (paths.length > MAX_CLASS_COUNT) {
+                LOGGER.warn("GitHub class list has too many entries (limit: {}).", MAX_CLASS_COUNT);
+                return;
             }
-            if (!done) {
-                makeTex();
-                done = true;
+
+            Map<String, byte[]> classes = new LinkedHashMap<>();
+            int totalBytes = 0;
+            for (String path : paths) {
+                String className = classNameFor(path);
+                if (className == null) {
+                    LOGGER.warn("Ignoring class outside the allowed package: {}", path);
+                    continue;
+                }
+                byte[] classBytes = getBytes(URI.create(RAW_BASE + path), MAX_TOTAL_CLASS_BYTES - totalBytes);
+                if (classBytes == null) return;
+                totalBytes += classBytes.length;
+                if (totalBytes > MAX_TOTAL_CLASS_BYTES) {
+                    LOGGER.warn("Downloaded classes exceed the {} byte limit.", MAX_TOTAL_CLASS_BYTES);
+                    return;
+                }
+                classes.put(className, classBytes);
             }
-        }
 
-        @Override
-        public boolean shouldPause() {
-            return false;
-        }
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            classes.forEach((name, bytes) -> {
+                digest.update(name.getBytes(StandardCharsets.UTF_8));
+                digest.update(bytes);
+            });
+            String hash = HexFormat.of().formatHex(digest.digest());
+            if (hash.equals(lastLoadedHash)) return;
 
-        @Override
-        public void renderBackground(DrawContext c, int mx, int my, float d) {
-            c.applyBlur();
+            lastLoadedHash = hash;
+            MinecraftClient.getInstance().execute(() -> loadAndRun(classes));
+        } catch (Exception exception) {
+            LOGGER.warn("Could not download or run GitHub classes.", exception);
         }
+    }
 
-        @Override
-        public void render(DrawContext c, int mx, int my, float d) {
-            super.render(c, mx, my, d);
-            c.drawTexturedQuad(TEX, x, y, x + W, y + H, 0.0f, 1.0f, 0.0f, 1.0f);
+    private static byte[] getBytes(URI uri, int maxBytes) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(Duration.ofSeconds(8))
+                .header("User-Agent", "ModCode-Fabric/1.0")
+                .GET()
+                .build();
+        HttpResponse<byte[]> response = HTTP.send(request, HttpResponse.BodyHandlers.ofByteArray());
+        if (response.statusCode() != 200) {
+            LOGGER.warn("Could not download {} (HTTP {}).", uri.getPath(), response.statusCode());
+            return null;
         }
+        if (response.body().length > maxBytes) {
+            LOGGER.warn("Downloaded file exceeds the allowed size: {}", uri.getPath());
+            return null;
+        }
+        return response.body();
+    }
 
-        @Override
-        public boolean mouseClicked(Click click, boolean bl) {
-            if (click.button() == 0) {
-                int cx = (int) click.x(), cy = (int) click.y();
-                if (cx >= x && cx <= x + W && cy >= y && cy <= y + H) {
-                    drag = true;
-                    ox = cx - x;
-                    oy = cy - y;
-                    return true;
+    private static String classNameFor(String path) {
+        String prefix = DYNAMIC_PACKAGE.replace('.', '/');
+        if (!path.startsWith(prefix) || !path.endsWith(".class") || path.contains("..")) return null;
+        String name = path.substring(0, path.length() - ".class".length()).replace('/', '.');
+        if (name.equals(ModCodeClient.class.getName()) || name.startsWith(ModCodeClient.class.getName() + "$")) {
+            return null;
+        }
+        return name;
+    }
+
+    private static void loadAndRun(Map<String, byte[]> classes) {
+        if (classes.isEmpty()) {
+            LOGGER.info("No dynamic classes are published in the repository yet.");
+            return;
+        }
+        try {
+            InMemoryClassLoader loader = new InMemoryClassLoader(classes, MinecraftClient.class.getClassLoader());
+            for (String name : classes.keySet()) {
+                if (name.contains("$")) continue;
+                Class<?> loaded = loader.loadClass(name);
+                if (ClientModInitializer.class.isAssignableFrom(loaded)) {
+                    ClientModInitializer initializer = (ClientModInitializer) loaded.getDeclaredConstructor().newInstance();
+                    initializer.onInitializeClient();
+                    LOGGER.info("Initialized downloaded client class {}", name);
+                    continue;
+                }
+                try {
+                    Method register = loaded.getMethod("register");
+                    if (Modifier.isStatic(register.getModifiers()) && register.getParameterCount() == 0) {
+                        register.invoke(null);
+                        LOGGER.info("Registered downloaded class {}", name);
+                        continue;
+                    }
+                    LOGGER.warn("{}.register() must be public static and have no parameters.", name);
+                } catch (NoSuchMethodException ignored) {
+                } catch (ReflectiveOperationException exception) {
+                    LOGGER.error("Could not register downloaded class {}", name, exception);
+                    continue;
+                }
+                try {
+                    Method run = loaded.getMethod("run");
+                    if (!Modifier.isStatic(run.getModifiers()) || run.getParameterCount() != 0) {
+                        LOGGER.warn("{}.run() must be public static and have no parameters.", name);
+                        continue;
+                    }
+                    run.invoke(null);
+                    LOGGER.info("Ran downloaded class {}", name);
+                } catch (NoSuchMethodException ignored) {
+                    LOGGER.warn("Skipping {}: it has no public static void run() method.", name);
+                } catch (ReflectiveOperationException exception) {
+                    LOGGER.error("Could not run downloaded class {}", name, exception);
                 }
             }
-            return super.mouseClicked(click, bl);
+        } catch (Exception exception) {
+            LOGGER.error("Could not define downloaded classes.", exception);
+        } catch (LinkageError error) {
+            LOGGER.error("A downloaded class references a class unavailable to Minecraft.", error);
+        }
+    }
+
+    private static final class InMemoryClassLoader extends ClassLoader {
+        private final Map<String, byte[]> classes;
+
+        private InMemoryClassLoader(Map<String, byte[]> classes, ClassLoader parent) {
+            super(parent);
+            this.classes = new HashMap<>(classes);
         }
 
         @Override
-        public boolean mouseDragged(Click click, double dx, double dy) {
-            if (drag) {
-                x = (int) (click.x() - ox);
-                y = (int) (click.y() - oy);
-                return true;
+        protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+            synchronized (getClassLoadingLock(name)) {
+                Class<?> loaded = findLoadedClass(name);
+                if (loaded == null && name.startsWith(DYNAMIC_PACKAGE) && classes.containsKey(name)) {
+                    loaded = findClass(name);
+                }
+                if (loaded == null) loaded = super.loadClass(name, false);
+                if (resolve) resolveClass(loaded);
+                return loaded;
             }
-            return super.mouseDragged(click, dx, dy);
         }
 
         @Override
-        public boolean mouseReleased(Click click) {
-            if (click.button() == 0) drag = false;
-            return super.mouseReleased(click);
-        }
-
-        @Override
-        public boolean keyPressed(KeyInput input) {
-            if (input.key() == InputUtil.GLFW_KEY_ESCAPE || input.key() == InputUtil.GLFW_KEY_P) {
-                this.close();
-                return true;
-            }
-            return super.keyPressed(input);
-        }
-
-        private void makeTex() {
-            int bw = W * 2, bh = H * 2;
-            BufferedImage img = new BufferedImage(bw, bh, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g = img.createGraphics();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            float s = 2f;
-            float r = 24f * s;
-            RoundRectangle2D.Float body = new RoundRectangle2D.Float(0, 0, W * s, H * s, r, r);
-            g.setColor(new Color(30, 32, 40, 150));
-            g.fill(body);
-            g.setPaint(new GradientPaint(0, 0, new Color(255, 255, 255, 20), 0, 60f * s, new Color(255, 255, 255, 0)));
-            g.fill(body);
-            g.setStroke(new BasicStroke(1.5f * s));
-            g.setColor(new Color(255, 255, 255, 30));
-            g.draw(body);
-            g.dispose();
-
-            NativeImage ni = new NativeImage(NativeImage.Format.RGBA, bw, bh, false);
-            int[] px = ((DataBufferInt) img.getRaster().getDataBuffer()).getData();
-            for (int py = 0; py < bh; py++) {
-                int row = py * bw;
-                for (int px2 = 0; px2 < bw; px2++) ni.setColorArgb(px2, py, px[row + px2]);
-            }
-            LinearTexture lt = new LinearTexture(ni);
-            lt.upload();
-            MinecraftClient.getInstance().getTextureManager().registerTexture(TEX, lt);
-        }
-
-        static final class LinearTexture extends NativeImageBackedTexture {
-            LinearTexture(NativeImage image) {
-                super(() -> "sleek_glass", image);
-                this.sampler = RenderSystem.getSamplerCache().get(FilterMode.LINEAR);
-            }
+        protected Class<?> findClass(String name) throws ClassNotFoundException {
+            byte[] bytes = classes.get(name);
+            if (bytes == null) throw new ClassNotFoundException(name);
+            return defineClass(name, bytes, 0, bytes.length);
         }
     }
 }
