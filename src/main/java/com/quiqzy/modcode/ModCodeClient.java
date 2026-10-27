@@ -45,8 +45,8 @@ public final class ModCodeClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        LOGGER.info("Mod Code is running. Checking GitHub for compiled Java classes every 20 seconds.");
-        SCRIPT_POLLER.scheduleWithFixedDelay(this::checkForClasses, 0, 20, TimeUnit.SECONDS);
+        LOGGER.info("Mod Code is running. Checking GitHub for compiled Java classes every 5 seconds.");
+        SCRIPT_POLLER.scheduleWithFixedDelay(this::checkForClasses, 0, 5, TimeUnit.SECONDS);
     }
 
     private void checkForClasses() {
