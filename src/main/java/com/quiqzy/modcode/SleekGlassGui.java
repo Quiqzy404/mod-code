@@ -28,7 +28,7 @@ public class SleekGlassGui {
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client == null || client.getWindow() == null) return;
-            boolean down = InputUtil.isKeyPressed(client.getWindow(), InputUtil.GLFW_KEY_LEFT_BRACKET);
+            boolean down = InputUtil.isKeyPressed(client.getWindow(), InputUtil.GLFW_KEY_P);
             if (down && !wasKey) {
                 if (client.currentScreen == null) client.setScreen(new SleekScreen());
                 else if (client.currentScreen instanceof SleekScreen) client.setScreen(null);
@@ -98,7 +98,7 @@ public class SleekGlassGui {
             drawToggle(c, tx, ty, togg);
             c.drawText(tr, Text.literal("Auto-Relog"), x + 28, y + 118, 0xFFF2F3F7, false);
 
-            c.drawText(tr, Text.literal("[Ü] schließen · Header ziehbar"), x + 14, y + H - 16, 0xFF6E7480, false);
+            c.drawText(tr, Text.literal("[P] schließen · Header ziehbar"), x + 14, y + H - 16, 0xFF6E7480, false);
         }
 
         private void drawToggle(DrawContext c, int x, int y, boolean on) {
@@ -174,7 +174,7 @@ public class SleekGlassGui {
 
         @Override
         public boolean keyPressed(KeyInput input) {
-            if (input.key() == InputUtil.GLFW_KEY_ESCAPE || input.key() == InputUtil.GLFW_KEY_LEFT_BRACKET) {
+            if (input.key() == InputUtil.GLFW_KEY_ESCAPE || input.key() == InputUtil.GLFW_KEY_P) {
                 close();
                 return true;
             }
