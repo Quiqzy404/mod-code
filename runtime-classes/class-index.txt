@@ -2,8 +2,7 @@ com/quiqzy/modcode/AppleGlassGui$AppleGlassScreen$LinearTexture.class
 com/quiqzy/modcode/AppleGlassGui$AppleGlassScreen.class
 com/quiqzy/modcode/AppleGlassGui.class
 com/quiqzy/modcode/AutoRelog.class
-com/quiqzy/modcode/SleekGlassGui$ClientScreen$LinearTexture.class
-com/quiqzy/modcode/SleekGlassGui$ClientScreen$Module.class
-com/quiqzy/modcode/SleekGlassGui$ClientScreen.class
+com/quiqzy/modcode/SleekGlassGui$GlassWindow$LinearTexture.class
+com/quiqzy/modcode/SleekGlassGui$GlassWindow.class
 com/quiqzy/modcode/SleekGlassGui.class
 com/quiqzy/modcode/TestFeature.class
