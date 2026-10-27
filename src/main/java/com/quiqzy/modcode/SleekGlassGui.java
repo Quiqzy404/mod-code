@@ -38,15 +38,24 @@ public class SleekGlassGui {
     }
 
     public static final class SleekScreen extends Screen {
-        private static final int W = 420, H = 280, PAD = 20;
-        private static final int TW = W + PAD * 2, TH = H + PAD * 2;
-        private static final Identifier TEX = Identifier.of("modcode", "sleek_glass");
-        private static boolean done = false;
+        private static final int WINDOW_WIDTH = 320;
+        private static final int WINDOW_HEIGHT = 210;
+        private static final int SHADOW_PAD = 20;
+        private static final int TOTAL_WIDTH = WINDOW_WIDTH + SHADOW_PAD * 2;
+        private static final int TOTAL_HEIGHT = WINDOW_HEIGHT + SHADOW_PAD * 2;
+        private static final int SCALE = 2;
+        private static final int BITMAP_WIDTH = TOTAL_WIDTH * SCALE;
+        private static final int BITMAP_HEIGHT = TOTAL_HEIGHT * SCALE;
+        private static final Identifier TEX_ACTIVE_ID = Identifier.of("modcode", "sleek_glass_active");
+        private static final Identifier TEX_INACTIVE_ID = Identifier.of("modcode", "sleek_glass_inactive");
+        private static boolean texturesGenerated = false;
 
-        private int x = -1, y = -1;
-        private boolean drag = false;
-        private double ox, oy;
-        private boolean togg = true;
+        private boolean isDragging = false;
+        private double dragOffsetX;
+        private double dragOffsetY;
+        private int windowX = -1;
+        private int windowY = -1;
+        public static boolean autoRelogEnabled = true;
 
         public SleekScreen() {
             super(Text.literal("Sleek Glass"));
@@ -54,20 +63,18 @@ public class SleekGlassGui {
 
         @Override
         protected void init() {
-            if (x == -1 || y == -1) {
-                x = (this.width - W) / 2;
-                y = (this.height - H) / 2;
+            super.init();
+            ensureTexturesGenerated();
+            if (windowX == -1 || windowY == -1) {
+                windowX = (this.width - WINDOW_WIDTH) / 2;
+                windowY = (this.height - WINDOW_HEIGHT) / 2;
             }
-            clamp();
-            if (!done) {
-                makeTex();
-                done = true;
-            }
+            clampWindowPosition();
         }
 
-        private void clamp() {
-            x = Math.max(4, Math.min(this.width - W - 4, x));
-            y = Math.max(4, Math.min(this.height - H - 4, y));
+        private void clampWindowPosition() {
+            windowX = Math.max(4, Math.min(this.width - WINDOW_WIDTH - 4, windowX));
+            windowY = Math.max(4, Math.min(this.height - WINDOW_HEIGHT - 4, windowY));
         }
 
         @Override
@@ -76,164 +83,161 @@ public class SleekGlassGui {
         }
 
         @Override
-        public void renderBackground(DrawContext c, int mx, int my, float d) {
-            c.applyBlur();
+        public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+            context.applyBlur();
         }
 
         @Override
-        public void render(DrawContext c, int mx, int my, float d) {
-            super.render(c, mx, my, d);
-            c.drawTexture(RenderPipelines.GUI_TEXTURED, TEX, x - PAD, y - PAD, 0f, 0f, TW, TH, TW, TH);
+        public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+            super.render(context, mouseX, mouseY, delta);
+            int drawX = windowX - SHADOW_PAD;
+            int drawY = windowY - SHADOW_PAD;
+            Identifier tex = autoRelogEnabled ? TEX_ACTIVE_ID : TEX_INACTIVE_ID;
+            context.drawTexturedQuad(tex, drawX, drawY, drawX + TOTAL_WIDTH, drawY + TOTAL_HEIGHT, 0.0f, 1.0f, 0.0f, 1.0f);
 
             var tr = MinecraftClient.getInstance().textRenderer;
-            c.drawText(tr, Text.literal("Sleek Glass"), x + 70, y + 24, 0xFFF2F3F7, false);
-            c.drawText(tr, Text.literal("Fabric 1.21.11 • Live Reload"), x + 70, y + 40, 0xFFAFB4BF, false);
-
-            fillRound(c, x + 14, y + 70, W - 28, 70, 12, 0x14FFFFFF);
-            strokeRound(c, x + 14, y + 70, W - 28, 70, 12, 0x1FFFFFFF);
-            c.drawText(tr, Text.literal("Widgets"), x + 28, y + 86, 0xFFF2F3F7, false);
-            c.drawText(tr, Text.literal("Klasse live nachgeladen"), x + 28, y + 104, 0xFFAFB4BF, false);
-
-            int tx = x + W - 60, ty = y + 94;
-            drawToggle(c, tx, ty, togg);
-            c.drawText(tr, Text.literal("Auto-Relog"), x + 28, y + 118, 0xFFF2F3F7, false);
-
-            c.drawText(tr, Text.literal("[P] schließen · Header ziehbar"), x + 14, y + H - 16, 0xFF6E7480, false);
-        }
-
-        private void drawToggle(DrawContext c, int x, int y, boolean on) {
-            int w = 44, h = 24, r = h / 2;
-            int col = on ? 0xFF34D399 : 0xFF383B44;
-            c.fill(x, y + r, x + w, y + h - r, col);
-            c.fill(x + r, y, x + w - r, y + h, col);
-            fillCircle(c, x + r, y + r, r, col);
-            fillCircle(c, x + w - r, y + r, r, col);
-            int kx = on ? x + w - h + 2 : x + 2;
-            fillCircle(c, kx + r - 2, y + r - 2, r - 2, 0xFFF6F7FA);
-        }
-
-        private void fillCircle(DrawContext c, int cx, int cy, int r, int col) {
-            if ((col >>> 24) == 0) return;
-            int r2 = r * r;
-            for (int dy = -r; dy <= r; dy++) {
-                int h = (int) Math.sqrt(r2 - dy * dy);
-                c.fill(cx - h, cy + dy, cx + h + 1, cy + dy + 1, col);
-            }
-        }
-
-        private void fillRound(DrawContext c, int x, int y, int w, int h, int r, int col) {
-            if ((col >>> 24) == 0) return;
-            c.fill(x + r, y, x + w - r, y + h, col);
-            c.fill(x, y + r, x + w, y + h - r, col);
-            fillCircle(c, x + r, y + r, r, col);
-            fillCircle(c, x + w - r, y + r, r, col);
-            fillCircle(c, x + r, y + h - r, r, col);
-            fillCircle(c, x + w - r, y + h - r, r, col);
-        }
-
-        private void strokeRound(DrawContext c, int x, int y, int w, int h, int r, int col) {
-            if ((col >>> 24) == 0) return;
-            c.fill(x + r, y, x + w - r, y + 1, col);
-            c.fill(x + r, y + h - 1, x + w - r, y + h, col);
-            c.fill(x, y + r, x + 1, y + h - r, col);
-            c.fill(x + w - 1, y + r, x + w, y + h - r, col);
+            context.drawText(tr, Text.literal("Sleek Glass"), windowX + 70, windowY + 24, 0xFFF2F3F7, false);
+            context.drawText(tr, Text.literal("Fabric 1.21.11 • Live Reload"), windowX + 70, windowY + 40, 0xFFAFB4BF, false);
+            context.drawText(tr, Text.literal("[P] schließen · Header ziehbar"), windowX + 14, windowY + WINDOW_HEIGHT - 16, 0xFF6E7480, false);
         }
 
         @Override
-        public boolean mouseClicked(Click click, boolean b) {
-            if (click.button() != 0) return super.mouseClicked(click, b);
-            int cx = (int) click.x(), cy = (int) click.y();
-            if (cx >= x + 16 && cx <= x + 28 && cy >= y + 13 && cy <= y + 25) { close(); return true; }
-            int tx = x + W - 60, ty = y + 94;
-            if (cx >= tx && cx <= tx + 44 && cy >= ty && cy <= ty + 24) { togg = !togg; return true; }
-            if (cx >= x && cx <= x + W && cy >= y && cy <= y + H) {
-                drag = true;
-                ox = cx - x;
-                oy = cy - y;
-                return true;
+        public boolean mouseClicked(Click click, boolean bl) {
+            if (click.button() == 0) {
+                int x = windowX;
+                int y = windowY;
+                double dx = click.x() - (x + 22);
+                double dy = click.y() - (y + 19);
+                if (dx * dx + dy * dy <= 8 * 8) {
+                    this.close();
+                    return true;
+                }
+                int toggleX = x + WINDOW_WIDTH - 70;
+                int toggleY = y + 106 + 14;
+                if (click.x() >= toggleX && click.x() <= toggleX + 54 && click.y() >= toggleY && click.y() <= toggleY + 30) {
+                    autoRelogEnabled = !autoRelogEnabled;
+                    return true;
+                }
+                if (click.x() >= x && click.x() <= x + WINDOW_WIDTH && click.y() >= y && click.y() <= y + WINDOW_HEIGHT) {
+                    isDragging = true;
+                    dragOffsetX = click.x() - windowX;
+                    dragOffsetY = click.y() - windowY;
+                    return true;
+                }
             }
-            return super.mouseClicked(click, b);
+            return super.mouseClicked(click, bl);
         }
 
         @Override
-        public boolean mouseDragged(Click click, double dx, double dy) {
-            if (drag) {
-                x = (int) (click.x() - ox);
-                y = (int) (click.y() - oy);
-                clamp();
+        public boolean mouseDragged(Click click, double deltaX, double deltaY) {
+            if (isDragging) {
+                windowX = (int) (click.x() - dragOffsetX);
+                windowY = (int) (click.y() - dragOffsetY);
+                clampWindowPosition();
                 return true;
             }
-            return super.mouseDragged(click, dx, dy);
+            return super.mouseDragged(click, deltaX, deltaY);
         }
 
         @Override
         public boolean mouseReleased(Click click) {
-            if (click.button() == 0) drag = false;
+            if (click.button() == 0) {
+                isDragging = false;
+            }
             return super.mouseReleased(click);
         }
 
         @Override
         public boolean keyPressed(KeyInput input) {
             if (input.key() == InputUtil.GLFW_KEY_ESCAPE || input.key() == InputUtil.GLFW_KEY_P) {
-                close();
+                this.close();
                 return true;
             }
             return super.keyPressed(input);
         }
 
-        private void makeTex() {
-            int bw = TW * 2, bh = TH * 2;
-            BufferedImage img = new BufferedImage(bw, bh, BufferedImage.TYPE_INT_ARGB);
-            Graphics2D g = img.createGraphics();
-            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-            float s = 2f, pad = PAD * s, w = W * s, h = H * s, r = 24f * s;
-
-            for (int i = 10; i >= 1; i--) {
-                float off = i * 1.5f * s;
-                float a = (11 - i) * 0.015f;
-                g.setColor(new Color(0, 0, 0, a));
-                g.fill(new RoundRectangle2D.Float(pad - off * 0.5f, pad + 3f * s - off * 0.2f, w + off, h + off * 0.8f, r + off, r + off));
-            }
-
-            RoundRectangle2D.Float body = new RoundRectangle2D.Float(pad, pad, w, h, r, r);
-            g.setPaint(new GradientPaint(pad, pad, new Color(28, 30, 38, 225), pad, pad + h, new Color(16, 17, 23, 230)));
-            g.fill(body);
-            g.setPaint(new GradientPaint(pad, pad, new Color(255, 255, 255, 38), pad, pad + 60f * s, new Color(255, 255, 255, 0)));
-            g.fill(body);
-            g.setStroke(new BasicStroke(1.5f * s));
-            g.setPaint(new GradientPaint(pad, pad, new Color(255, 255, 255, 70), pad, pad + h, new Color(255, 255, 255, 15)));
-            g.draw(body);
-
-            g.setStroke(new BasicStroke(1f * s));
-            g.setColor(new Color(255, 255, 255, 25));
-            g.drawLine((int) (pad + 12 * s), (int) (pad + 32 * s), (int) (pad + w - 12 * s), (int) (pad + 32 * s));
-
-            float ty = pad + 19f * s, tr = 5f * s;
-            float[] xs = {pad + 22f * s, pad + 38f * s, pad + 54f * s};
-            Color[] c1 = {new Color(255, 95, 86), new Color(255, 189, 46), new Color(39, 201, 63)};
-            Color[] c2 = {new Color(224, 68, 62), new Color(222, 161, 35), new Color(26, 171, 41)};
-            for (int i = 0; i < 3; i++) {
-                g.setColor(c1[i]);
-                g.fill(new Ellipse2D.Float(xs[i] - tr, ty - tr, tr * 2, tr * 2));
-                g.setColor(c2[i]);
-                g.draw(new Ellipse2D.Float(xs[i] - tr, ty - tr, tr * 2, tr * 2));
-            }
-            g.dispose();
-
-            NativeImage ni = new NativeImage(NativeImage.Format.RGBA, bw, bh, false);
-            int[] px = ((DataBufferInt) img.getRaster().getDataBuffer()).getData();
-            for (int py = 0; py < bh; py++) {
-                int row = py * bw;
-                for (int px2 = 0; px2 < bw; px2++) ni.setColorArgb(px2, py, px[row + px2]);
-            }
-            LinearTexture lt = new LinearTexture(ni);
-            lt.upload();
-            MinecraftClient.getInstance().getTextureManager().registerTexture(TEX, lt);
+        private static void ensureTexturesGenerated() {
+            if (texturesGenerated) return;
+            generateTexture(TEX_ACTIVE_ID, true);
+            generateTexture(TEX_INACTIVE_ID, false);
+            texturesGenerated = true;
         }
 
-        static final class LinearTexture extends NativeImageBackedTexture {
-            LinearTexture(NativeImage image) {
+        private static void generateTexture(Identifier id, boolean active) {
+            BufferedImage bImage = new BufferedImage(BITMAP_WIDTH, BITMAP_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = bImage.createGraphics();
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+            float s = (float) SCALE;
+            float pad = SHADOW_PAD * s;
+            float winW = WINDOW_WIDTH * s;
+            float winH = WINDOW_HEIGHT * s;
+            float winR = 24.0f * s;
+
+            for (int i = 12; i >= 1; i--) {
+                float shadowOffset = i * 1.5f * s;
+                float shadowAlpha = (13 - i) * 0.018f;
+                g.setColor(new Color(0.0f, 0.0f, 0.0f, shadowAlpha));
+                g.fill(new RoundRectangle2D.Float(
+                        pad - shadowOffset * 0.5f,
+                        pad + 4.0f * s - shadowOffset * 0.2f,
+                        winW + shadowOffset,
+                        winH + shadowOffset * 0.8f,
+                        winR + shadowOffset,
+                        winR + shadowOffset
+                ));
+            }
+
+            RoundRectangle2D.Float winRect = new RoundRectangle2D.Float(pad, pad, winW, winH, winR, winR);
+            g.setPaint(new GradientPaint(pad, pad, new Color(28, 30, 38, 225), pad, pad + winH, new Color(16, 17, 23, 230)));
+            g.fill(winRect);
+            g.setPaint(new GradientPaint(pad, pad, new Color(255, 255, 255, 42), pad, pad + 65.0f * s, new Color(255, 255, 255, 0)));
+            g.fill(winRect);
+            g.setStroke(new BasicStroke(1.5f * s));
+            g.setPaint(new GradientPaint(pad, pad, new Color(255, 255, 255, 90), pad, pad + winH, new Color(255, 255, 255, 25)));
+            g.draw(winRect);
+
+            g.setStroke(new BasicStroke(1.0f * s));
+            g.setColor(new Color(255, 255, 255, 25));
+            g.drawLine((int) (pad + 12 * s), (int) (pad + 32 * s), (int) (pad + winW - 12 * s), (int) (pad + 32 * s));
+
+            float tlY = pad + 19 * s;
+            float tlR = 5.5f * s;
+            float redX = pad + 22 * s;
+            g.setColor(new Color(255, 95, 86));
+            g.fill(new Ellipse2D.Float(redX - tlR, tlY - tlR, tlR * 2, tlR * 2));
+            g.setColor(new Color(224, 68, 62));
+            g.draw(new Ellipse2D.Float(redX - tlR, tlY - tlR, tlR * 2, tlR * 2));
+            float yelX = redX + 16 * s;
+            g.setColor(new Color(255, 189, 46));
+            g.fill(new Ellipse2D.Float(yelX - tlR, tlY - tlR, tlR * 2, tlR * 2));
+            g.setColor(new Color(222, 161, 35));
+            g.draw(new Ellipse2D.Float(yelX - tlR, tlY - tlR, tlR * 2, tlR * 2));
+            float grnX = yelX + 16 * s;
+            g.setColor(new Color(39, 201, 63));
+            g.fill(new Ellipse2D.Float(grnX - tlR, tlY - tlR, tlR * 2, tlR * 2));
+            g.setColor(new Color(26, 171, 41));
+            g.draw(new Ellipse2D.Float(grnX - tlR, tlY - tlR, tlR * 2, tlR * 2));
+
+            g.dispose();
+
+            NativeImage nImage = new NativeImage(NativeImage.Format.RGBA, BITMAP_WIDTH, BITMAP_HEIGHT, false);
+            int[] rawPixels = ((DataBufferInt) bImage.getRaster().getDataBuffer()).getData();
+            for (int y = 0; y < BITMAP_HEIGHT; y++) {
+                int rowOffset = y * BITMAP_WIDTH;
+                for (int x = 0; x < BITMAP_WIDTH; x++) {
+                    nImage.setColorArgb(x, y, rawPixels[rowOffset + x]);
+                }
+            }
+
+            LinearTexture tex = new LinearTexture(nImage);
+            tex.upload();
+            MinecraftClient.getInstance().getTextureManager().registerTexture(id, tex);
+        }
+
+        public static final class LinearTexture extends NativeImageBackedTexture {
+            public LinearTexture(NativeImage image) {
                 super(() -> "sleek_glass", image);
                 this.sampler = RenderSystem.getSamplerCache().get(FilterMode.LINEAR);
             }
