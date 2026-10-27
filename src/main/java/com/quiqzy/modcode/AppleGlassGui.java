@@ -1,5 +1,7 @@
 package com.quiqzy.modcode;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.FilterMode;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.Click;
@@ -11,6 +13,17 @@ import net.minecraft.client.texture.NativeImageBackedTexture;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
 
 public class AppleGlassGui {
 
@@ -61,17 +74,17 @@ public class AppleGlassGui {
 
     public static final class AppleGlassScreen extends Screen {
 
-        // Logische GUI-Maße
-        private static final int WINDOW_WIDTH = 310;
-        private static final int WINDOW_HEIGHT = 205;
-        private static final int SHADOW_PAD = 16;
+        // Logische GUI-Maße (Pixel auf dem Bildschirm)
+        private static final int WINDOW_WIDTH = 320;
+        private static final int WINDOW_HEIGHT = 210;
+        private static final int SHADOW_PAD = 20;
         private static final int TOTAL_WIDTH = WINDOW_WIDTH + SHADOW_PAD * 2;
         private static final int TOTAL_HEIGHT = WINDOW_HEIGHT + SHADOW_PAD * 2;
 
-        // 2x Retina-Auflösung für echte stufenlose Vektorkurven (Anti-Aliased SDF)
-        private static final int TEX_SCALE = 2;
-        private static final int TEX_WIDTH = TOTAL_WIDTH * TEX_SCALE;
-        private static final int TEX_HEIGHT = TOTAL_HEIGHT * TEX_SCALE;
+        // 2x Retina Vektorauflösung (680 x 500 Pixel) für seidig glatte Vektorgrafik
+        private static final int SCALE = 2;
+        private static final int BITMAP_WIDTH = TOTAL_WIDTH * SCALE;
+        private static final int BITMAP_HEIGHT = TOTAL_HEIGHT * SCALE;
 
         private static final Identifier TEX_ACTIVE_ID = Identifier.of("modcode", "apple_glass_active");
         private static final Identifier TEX_INACTIVE_ID = Identifier.of("modcode", "apple_glass_inactive");
@@ -121,37 +134,8 @@ public class AppleGlassGui {
             int drawY = windowY - SHADOW_PAD;
             Identifier tex = autoRelogEnabled ? TEX_ACTIVE_ID : TEX_INACTIVE_ID;
 
-            // Zeichnet die hochauflösende, anti-aliased Apple-Glas-Textur (Retina Vector Look)
+            // Zeichnet die hochauflösende, anti-aliased Vektorgrafik mit stufenlosem Linear-Filter
             context.drawTexturedQuad(tex, drawX, drawY, drawX + TOTAL_WIDTH, drawY + TOTAL_HEIGHT, 0.0f, 1.0f, 0.0f, 1.0f);
-
-            // Typografie & Beschriftung auf den Apple Frosted Cards
-            renderLabels(context, windowX, windowY);
-        }
-
-        private void renderLabels(DrawContext context, int x, int y) {
-            // Titel
-            context.drawText(this.textRenderer, "✦ Mod Code  •  Control", x + 68, y + 13, 0xFFFFFFFF, false);
-
-            // Card 1: System Info
-            int card1Y = y + 36;
-            context.drawText(this.textRenderer, "System: Fabric 1.21.11 Client", x + 26, card1Y + 12, 0xFFFFFFFF, false);
-            context.drawText(this.textRenderer, "Status: Dynamic Class Reloading aktiv", x + 26, card1Y + 26, 0xFF88D49E, false);
-            context.drawText(this.textRenderer, "AutoRelog Schwelle: Y = -4.0", x + 26, card1Y + 39, 0xFFA0AAB8, false);
-
-            // Card 2: Controls
-            int card2Y = y + 104;
-            context.drawText(this.textRenderer, "Auto-Relog Schutz", x + 26, card2Y + 14, 0xFFFFFFFF, false);
-            context.drawText(this.textRenderer, "Verbindung bei Absturz sichern", x + 26, card2Y + 28, 0xFF8A93A0, false);
-
-            // Toggle Text
-            String toggleText = autoRelogEnabled ? "EIN" : "AUS";
-            int tw = this.textRenderer.getWidth(toggleText);
-            int toggleX = x + WINDOW_WIDTH - 64;
-            int toggleY = card2Y + 16;
-            context.drawText(this.textRenderer, toggleText, toggleX + (44 - tw) / 2, toggleY + 4, autoRelogEnabled ? 0xFFFFFFFF : 0xFFB0B6C0, false);
-
-            // Footer
-            context.drawText(this.textRenderer, "[Ü] Schließen  •  Header frei verschiebbar", x + 16, y + WINDOW_HEIGHT - 16, 0x66FFFFFF, false);
         }
 
         @Override
@@ -160,19 +144,19 @@ public class AppleGlassGui {
                 int x = windowX;
                 int y = windowY;
 
-                // 1. Roter Schließen-Knopf (Apple Traffic Light)
-                double dx = click.x() - (x + 20);
-                double dy = click.y() - (y + 18);
+                // 1. Roter Schließen-Knopf (Apple Traffic Light oben links)
+                double dx = click.x() - (x + 22);
+                double dy = click.y() - (y + 19);
                 if (dx * dx + dy * dy <= 8 * 8) {
                     this.close();
                     return true;
                 }
 
-                // 2. Klick auf den Apple Toggle Switch
-                int card2Y = y + 104;
-                int toggleX = x + WINDOW_WIDTH - 68;
+                // 2. Klick auf den Apple iOS Toggle Switch
+                int card2Y = y + 106;
+                int toggleX = x + WINDOW_WIDTH - 70;
                 int toggleY = card2Y + 14;
-                if (click.x() >= toggleX && click.x() <= toggleX + 50 && click.y() >= toggleY && click.y() <= toggleY + 26) {
+                if (click.x() >= toggleX && click.x() <= toggleX + 54 && click.y() >= toggleY && click.y() <= toggleY + 30) {
                     autoRelogEnabled = !autoRelogEnabled;
                     return true;
                 }
@@ -217,7 +201,7 @@ public class AppleGlassGui {
         }
 
         // ===================================================================
-        //  MATHEMATISCHER ANTI-ALIASED SDF-RENDERER FÜR APPLE RETINA GLASS
+        //  VEKTOR-GRAFIK RENDERER (ECHTES ANTI-ALIASING, KEINE PIXELKANTEN)
         // ===================================================================
 
         private static void ensureTexturesGenerated() {
@@ -230,200 +214,200 @@ public class AppleGlassGui {
         }
 
         private static void generateTexture(Identifier id, boolean active) {
-            NativeImage image = new NativeImage(NativeImage.Format.RGBA, TEX_WIDTH, TEX_HEIGHT, false);
+            BufferedImage bImage = new BufferedImage(BITMAP_WIDTH, BITMAP_HEIGHT, BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g = bImage.createGraphics();
 
-            float s = TEX_SCALE;
+            // Höchste Anti-Aliasing- und Render-Qualität für stufenlose Rundungen
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+            g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+
+            float s = (float) SCALE;
             float pad = SHADOW_PAD * s;
             float winW = WINDOW_WIDTH * s;
             float winH = WINDOW_HEIGHT * s;
-            float winR = 18.0f * s; // 36px Eckenradius für extra weiche Rundung
+            float winR = 24.0f * s; // 48px Retina-Kurvenradius (extrem weich gerundet)
 
-            float winLeft = pad;
-            float winTop = pad;
-            float winRight = pad + winW;
-            float winBottom = pad + winH;
-            float winCenterX = (winLeft + winRight) * 0.5f;
-            float winCenterY = (winTop + winBottom) * 0.5f;
-            float winHalfW = winW * 0.5f;
-            float winHalfH = winH * 0.5f;
+            // 1. Weicher macOS Drop-Shadow (mehrstufig transparent)
+            for (int i = 12; i >= 1; i--) {
+                float shadowOffset = i * 1.5f * s;
+                float shadowAlpha = (13 - i) * 0.018f;
+                g.setColor(new Color(0.0f, 0.0f, 0.0f, shadowAlpha));
+                g.fill(new RoundRectangle2D.Float(
+                        pad - shadowOffset * 0.5f,
+                        pad + 4.0f * s - shadowOffset * 0.2f,
+                        winW + shadowOffset,
+                        winH + shadowOffset * 0.8f,
+                        winR + shadowOffset,
+                        winR + shadowOffset
+                ));
+            }
 
-            // Card 1 Koordinaten (2x)
-            float c1L = winLeft + 14 * s, c1T = winTop + 34 * s, c1R = winRight - 14 * s, c1B = c1T + 58 * s, c1R_rad = 12 * s;
-            float c1CX = (c1L + c1R) * 0.5f, c1CY = (c1T + c1B) * 0.5f, c1HW = (c1R - c1L) * 0.5f, c1HH = (c1B - c1T) * 0.5f;
+            // 2. Fenster-Glaskörper (Frosted Dark Glass Gradient)
+            RoundRectangle2D.Float winRect = new RoundRectangle2D.Float(pad, pad, winW, winH, winR, winR);
+            g.setPaint(new GradientPaint(
+                    pad, pad, new Color(28, 30, 38, 225),
+                    pad, pad + winH, new Color(16, 17, 23, 230)
+            ));
+            g.fill(winRect);
 
-            // Card 2 Koordinaten (2x)
-            float c2L = winLeft + 14 * s, c2T = winTop + 98 * s, c2R = winRight - 14 * s, c2B = c2T + 50 * s, c2R_rad = 12 * s;
-            float c2CX = (c2L + c2R) * 0.5f, c2CY = (c2T + c2B) * 0.5f, c2HW = (c2R - c2L) * 0.5f, c2HH = (c2B - c2T) * 0.5f;
+            // 3. Apple Glas-Lichtreflexion an der Oberkante (Specular Sheen)
+            g.setPaint(new GradientPaint(
+                    pad, pad, new Color(255, 255, 255, 42),
+                    pad, pad + 65.0f * s, new Color(255, 255, 255, 0)
+            ));
+            g.fill(winRect);
 
-            // Toggle Pill Koordinaten (2x)
-            float pW = 44 * s, pH = 24 * s, pR = pH * 0.5f;
-            float pRgt = c2R - 12 * s, pLft = pRgt - pW, pTop = c2T + 13 * s, pBtm = pTop + pH;
-            float pCX = (pLft + pRgt) * 0.5f, pCY = (pTop + pBtm) * 0.5f, pHW = pW * 0.5f, pHH = pH * 0.5f;
-            float knobCX = active ? (pRgt - pR) : (pLft + pR);
-            float knobCY = pCY;
-            float knobR = pR - 2.5f * s;
+            // 4. Feine leuchtende Glaskante (Bezel Highlight)
+            g.setStroke(new BasicStroke(1.5f * s));
+            g.setPaint(new GradientPaint(
+                    pad, pad, new Color(255, 255, 255, 90),
+                    pad, pad + winH, new Color(255, 255, 255, 25)
+            ));
+            g.draw(winRect);
 
-            // Traffic Lights Koordinaten (2x)
-            float redX = winLeft + 20 * s, redY = winTop + 18 * s, tlR = 5.5f * s;
-            float yelX = redX + 15 * s, yelY = redY;
-            float grnX = yelX + 15 * s, grnY = redY;
+            // 5. Header-Trennlinie
+            g.setStroke(new BasicStroke(1.0f * s));
+            g.setColor(new Color(255, 255, 255, 25));
+            g.drawLine((int) (pad + 12 * s), (int) (pad + 32 * s), (int) (pad + winW - 12 * s), (int) (pad + 32 * s));
 
-            for (int y = 0; y < TEX_HEIGHT; y++) {
-                float fy = y + 0.5f;
-                for (int x = 0; x < TEX_WIDTH; x++) {
-                    float fx = x + 0.5f;
+            // 6. macOS Traffic Lights (Rot, Gelb, Grün)
+            float tlY = pad + 19 * s;
+            float tlR = 5.5f * s;
 
-                    // 1. Distanz zum Fenster-Körper (SDF)
-                    float distWin = sdfBox(fx - winCenterX, fy - winCenterY, winHalfW, winHalfH, winR);
+            // Rot
+            float redX = pad + 22 * s;
+            g.setColor(new Color(255, 95, 86));
+            g.fill(new Ellipse2D.Float(redX - tlR, tlY - tlR, tlR * 2, tlR * 2));
+            g.setColor(new Color(224, 68, 62));
+            g.draw(new Ellipse2D.Float(redX - tlR, tlY - tlR, tlR * 2, tlR * 2));
 
-                    // 2. Weicher macOS Umgebungs-Schatten
-                    float shadowDist = sdfBox(fx - winCenterX, (fy - 8.0f * s) - winCenterY, winHalfW, winHalfH, winR);
-                    float shadowAlpha = 0.0f;
-                    if (shadowDist > -2.0f) {
-                        shadowAlpha = (float) Math.exp(-Math.max(0.0f, shadowDist) / (12.0f * s)) * 0.42f;
-                    }
+            // Gelb
+            float yelX = redX + 16 * s;
+            g.setColor(new Color(255, 189, 46));
+            g.fill(new Ellipse2D.Float(yelX - tlR, tlY - tlR, tlR * 2, tlR * 2));
+            g.setColor(new Color(222, 161, 35));
+            g.draw(new Ellipse2D.Float(yelX - tlR, tlY - tlR, tlR * 2, tlR * 2));
 
-                    // Anti-Aliasing Faktor für den Fensterrand
-                    float winAlpha = clamp(0.5f - distWin, 0.0f, 1.0f);
+            // Grün
+            float grnX = yelX + 16 * s;
+            g.setColor(new Color(39, 201, 63));
+            g.fill(new Ellipse2D.Float(grnX - tlR, tlY - tlR, tlR * 2, tlR * 2));
+            g.setColor(new Color(26, 171, 41));
+            g.draw(new Ellipse2D.Float(grnX - tlR, tlY - tlR, tlR * 2, tlR * 2));
 
-                    float r = 0, g = 0, b = 0, a = 0;
+            // 7. Saubere Apple Sans-Serif Typografie
+            Font titleFont = new Font("Segoe UI", Font.BOLD, (int) (13 * s));
+            Font boldFont = new Font("Segoe UI", Font.BOLD, (int) (11.5f * s));
+            Font textFont = new Font("Segoe UI", Font.PLAIN, (int) (11 * s));
+            Font subFont = new Font("Segoe UI", Font.PLAIN, (int) (9.5f * s));
 
-                    if (shadowAlpha > 0.001f) {
-                        a = shadowAlpha;
-                    }
+            // Titel
+            g.setFont(titleFont);
+            g.setColor(new Color(245, 247, 250));
+            g.drawString("✦ Mod Code  •  Control", pad + 76 * s, pad + 23.5f * s);
 
-                    if (winAlpha > 0.001f) {
-                        // Frosted Glass Verlauf (Obsidian Dark Glass)
-                        float t = (fy - winTop) / winH;
-                        float bodyR = lerp(0.12f, 0.07f, t);
-                        float bodyG = lerp(0.13f, 0.08f, t);
-                        float bodyB = lerp(0.17f, 0.10f, t);
-                        float bodyA = 0.88f;
+            // Card 1: System Info
+            float c1X = pad + 14 * s;
+            float c1Y = pad + 40 * s;
+            float c1W = winW - 28 * s;
+            float c1H = 58 * s;
+            RoundRectangle2D.Float card1 = new RoundRectangle2D.Float(c1X, c1Y, c1W, c1H, 14 * s, 14 * s);
 
-                        // Apple Glas-Lichtreflexion an der Oberkante
-                        if (t < 0.28f) {
-                            float sheen = (1.0f - t / 0.28f) * 0.14f;
-                            bodyR += sheen; bodyG += sheen; bodyB += sheen;
-                        }
+            g.setColor(new Color(255, 255, 255, 20));
+            g.fill(card1);
+            g.setStroke(new BasicStroke(1.0f * s));
+            g.setColor(new Color(255, 255, 255, 38));
+            g.draw(card1);
 
-                        // Feine leuchtende 1.5px Glaskante (Bezel Highlight)
-                        float edgeDist = Math.abs(distWin + 0.8f * s);
-                        float edgeFactor = clamp(1.0f - edgeDist / (1.5f * s), 0.0f, 1.0f);
-                        float edgeBright = lerp(0.55f, 0.18f, t) * edgeFactor;
-                        bodyR += edgeBright; bodyG += edgeBright; bodyB += edgeBright;
+            g.setFont(boldFont);
+            g.setColor(new Color(255, 255, 255));
+            g.drawString("System: Fabric 1.21.11 Client", c1X + 14 * s, c1Y + 18 * s);
 
-                        // Header Trennlinie (subtil)
-                        float divDist = Math.abs(fy - (winTop + 28 * s));
-                        if (divDist < 0.75f * s && fx > winLeft + 10 * s && fx < winRight - 10 * s) {
-                            float divAlpha = (1.0f - divDist / (0.75f * s)) * 0.12f;
-                            bodyR += divAlpha; bodyG += divAlpha; bodyB += divAlpha;
-                        }
+            g.setFont(textFont);
+            g.setColor(new Color(136, 212, 158));
+            g.drawString("Status: Dynamic Class Reloading aktiv", c1X + 14 * s, c1Y + 34 * s);
 
-                        // Card 1 SDF
-                        float dC1 = sdfBox(fx - c1CX, fy - c1CY, c1HW, c1HH, c1R_rad);
-                        if (dC1 < 1.0f) {
-                            float cAlpha = clamp(0.5f - dC1, 0.0f, 1.0f);
-                            float cEdge = clamp(1.0f - Math.abs(dC1 + 0.6f * s) / (1.2f * s), 0.0f, 1.0f) * 0.16f;
-                            bodyR = lerp(bodyR, 0.22f + cEdge, cAlpha * 0.18f);
-                            bodyG = lerp(bodyG, 0.24f + cEdge, cAlpha * 0.18f);
-                            bodyB = lerp(bodyB, 0.28f + cEdge, cAlpha * 0.18f);
-                        }
+            g.setColor(new Color(160, 170, 184));
+            g.drawString("AutoRelog Schwelle: Y = -4.0", c1X + 14 * s, c1Y + 49 * s);
 
-                        // Card 2 SDF
-                        float dC2 = sdfBox(fx - c2CX, fy - c2CY, c2HW, c2HH, c2R_rad);
-                        if (dC2 < 1.0f) {
-                            float cAlpha = clamp(0.5f - dC2, 0.0f, 1.0f);
-                            float cEdge = clamp(1.0f - Math.abs(dC2 + 0.6f * s) / (1.2f * s), 0.0f, 1.0f) * 0.16f;
-                            bodyR = lerp(bodyR, 0.22f + cEdge, cAlpha * 0.18f);
-                            bodyG = lerp(bodyG, 0.24f + cEdge, cAlpha * 0.18f);
-                            bodyB = lerp(bodyB, 0.28f + cEdge, cAlpha * 0.18f);
-                        }
+            // Card 2: Controls
+            float c2X = pad + 14 * s;
+            float c2Y = pad + 106 * s;
+            float c2W = winW - 28 * s;
+            float c2H = 54 * s;
+            RoundRectangle2D.Float card2 = new RoundRectangle2D.Float(c2X, c2Y, c2W, c2H, 14 * s, 14 * s);
 
-                        // Toggle Pill Track SDF
-                        float dPill = sdfBox(fx - pCX, fy - pCY, pHW, pHH, pR);
-                        if (dPill < 1.0f) {
-                            float pAlpha = clamp(0.5f - dPill, 0.0f, 1.0f);
-                            float trR = active ? 0.20f : 0.25f;
-                            float trG = active ? 0.78f : 0.26f;
-                            float trB = active ? 0.35f : 0.30f;
-                            bodyR = lerp(bodyR, trR, pAlpha);
-                            bodyG = lerp(bodyG, trG, pAlpha);
-                            bodyB = lerp(bodyB, trB, pAlpha);
-                        }
+            g.setColor(new Color(255, 255, 255, 20));
+            g.fill(card2);
+            g.setStroke(new BasicStroke(1.0f * s));
+            g.setColor(new Color(255, 255, 255, 38));
+            g.draw(card2);
 
-                        // Toggle Knob SDF (Runder Schieberegler)
-                        float dKnob = sdfCircle(fx, fy, knobCX, knobCY, knobR);
-                        if (dKnob < 1.0f) {
-                            float kAlpha = clamp(0.5f - dKnob, 0.0f, 1.0f);
-                            bodyR = lerp(bodyR, 1.0f, kAlpha);
-                            bodyG = lerp(bodyG, 1.0f, kAlpha);
-                            bodyB = lerp(bodyB, 1.0f, kAlpha);
-                        }
+            g.setFont(boldFont);
+            g.setColor(new Color(255, 255, 255));
+            g.drawString("Auto-Relog Schutz", c2X + 14 * s, c2Y + 22 * s);
 
-                        // macOS Traffic Lights (Rot, Gelb, Grün)
-                        float dRed = sdfCircle(fx, fy, redX, redY, tlR);
-                        if (dRed < 1.0f) {
-                            float aDot = clamp(0.5f - dRed, 0.0f, 1.0f);
-                            bodyR = lerp(bodyR, 1.00f, aDot);
-                            bodyG = lerp(bodyG, 0.37f, aDot);
-                            bodyB = lerp(bodyB, 0.34f, aDot);
-                        }
-                        float dYel = sdfCircle(fx, fy, yelX, yelY, tlR);
-                        if (dYel < 1.0f) {
-                            float aDot = clamp(0.5f - dYel, 0.0f, 1.0f);
-                            bodyR = lerp(bodyR, 1.00f, aDot);
-                            bodyG = lerp(bodyG, 0.74f, aDot);
-                            bodyB = lerp(bodyB, 0.18f, aDot);
-                        }
-                        float dGrn = sdfCircle(fx, fy, grnX, grnY, tlR);
-                        if (dGrn < 1.0f) {
-                            float aDot = clamp(0.5f - dGrn, 0.0f, 1.0f);
-                            bodyR = lerp(bodyR, 0.15f, aDot);
-                            bodyG = lerp(bodyG, 0.79f, aDot);
-                            bodyB = lerp(bodyB, 0.25f, aDot);
-                        }
+            g.setFont(textFont);
+            g.setColor(new Color(138, 147, 160));
+            g.drawString("Verbindung bei Absturz sichern", c2X + 14 * s, c2Y + 39 * s);
 
-                        // Blend Fensterinhalt über Schatten
-                        r = lerp(r, bodyR, winAlpha * bodyA);
-                        g = lerp(g, bodyG, winAlpha * bodyA);
-                        b = lerp(b, bodyB, winAlpha * bodyA);
-                        a = Math.max(a, winAlpha * bodyA);
-                    }
+            // Apple iOS Style Pill Toggle Switch
+            float pW = 48 * s;
+            float pH = 26 * s;
+            float pX = c2X + c2W - pW - 14 * s;
+            float pY = c2Y + 14 * s;
+            RoundRectangle2D.Float pill = new RoundRectangle2D.Float(pX, pY, pW, pH, pH, pH);
 
-                    int ir = (int) (clamp(r, 0.0f, 1.0f) * 255);
-                    int ig = (int) (clamp(g, 0.0f, 1.0f) * 255);
-                    int ib = (int) (clamp(b, 0.0f, 1.0f) * 255);
-                    int ia = (int) (clamp(a, 0.0f, 1.0f) * 255);
+            Color trackColor = active ? new Color(52, 199, 89) : new Color(56, 59, 68);
+            g.setColor(trackColor);
+            g.fill(pill);
 
-                    // ARGB Farbwert schreiben
-                    int argb = (ia << 24) | (ir << 16) | (ig << 8) | ib;
-                    image.setColorArgb(x, y, argb);
+            g.setStroke(new BasicStroke(1.0f * s));
+            g.setColor(new Color(255, 255, 255, 50));
+            g.draw(pill);
+
+            // Runder Schieberegler-Knopf (Weiß)
+            float knobDiam = pH - 4.0f * s;
+            float knobX = active ? (pX + pW - knobDiam - 2.0f * s) : (pX + 2.0f * s);
+            float knobY = pY + 2.0f * s;
+
+            g.setColor(new Color(0, 0, 0, 40));
+            g.fill(new Ellipse2D.Float(knobX, knobY + 1.0f * s, knobDiam, knobDiam));
+            g.setColor(Color.WHITE);
+            g.fill(new Ellipse2D.Float(knobX, knobY, knobDiam, knobDiam));
+
+            // Footer
+            g.setFont(subFont);
+            g.setColor(new Color(255, 255, 255, 100));
+            g.drawString("[Ü] Schließen  •  Header frei verschiebbar", pad + 16 * s, pad + winH - 14 * s);
+
+            g.dispose();
+
+            // Pixel in NativeImage übertragen
+            NativeImage nImage = new NativeImage(NativeImage.Format.RGBA, BITMAP_WIDTH, BITMAP_HEIGHT, false);
+            int[] rawPixels = ((DataBufferInt) bImage.getRaster().getDataBuffer()).getData();
+            for (int y = 0; y < BITMAP_HEIGHT; y++) {
+                int rowOffset = y * BITMAP_WIDTH;
+                for (int x = 0; x < BITMAP_WIDTH; x++) {
+                    nImage.setColorArgb(x, y, rawPixels[rowOffset + x]);
                 }
             }
 
-            NativeImageBackedTexture tex = new NativeImageBackedTexture(() -> "apple_glass", image);
+            // Textur hochladen und GPU-Linear-Filter für stufenloses Vektor-Rendering setzen
+            LinearTexture tex = new LinearTexture(nImage);
             tex.upload();
             MinecraftClient.getInstance().getTextureManager().registerTexture(id, tex);
         }
 
-        private static float sdfBox(float px, float py, float halfW, float halfH, float r) {
-            float qx = Math.abs(px) - (halfW - r);
-            float qy = Math.abs(py) - (halfH - r);
-            float outsideDist = (float) Math.hypot(Math.max(qx, 0.0f), Math.max(qy, 0.0f));
-            float insideDist = Math.min(Math.max(qx, qy), 0.0f);
-            return outsideDist + insideDist - r;
-        }
-
-        private static float sdfCircle(float px, float py, float cx, float cy, float r) {
-            return (float) Math.hypot(px - cx, py - cy) - r;
-        }
-
-        private static float clamp(float val, float min, float max) {
-            return Math.max(min, Math.min(max, val));
-        }
-
-        private static float lerp(float a, float b, float t) {
-            return a + (b - a) * t;
+        // Texture-Klasse mit aktiviertem GL_LINEAR Sampler
+        public static final class LinearTexture extends NativeImageBackedTexture {
+            public LinearTexture(NativeImage image) {
+                super(() -> "apple_glass", image);
+                // Schaltet den GPU-Sampler von NEAREST auf LINEAR (echte stufenlose Glättung)
+                this.sampler = RenderSystem.getSamplerCache().get(FilterMode.LINEAR);
+            }
         }
     }
 }
